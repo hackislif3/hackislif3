@@ -13,7 +13,7 @@
 | Large Trades | تجمیع prints، آستانه دستی/تطبیقی (صدک به تفکیک ساعت روز + RVOL، فقط داده گذشته)، Consecutive، Cluster، Repeated execution at price، Diagonal/Stacked Imbalance، Volume Spike |
 | Absorption | کاندید از معاملات اجراشده + تأیید/ابطال/Retest قیمتی؛ شاهد L2 «Replenishment» فقط Realtime و بدون ادعای تشخیص Iceberg |
 | Signals | Strong Bullish/Bearish Pressure، Potential Bullish/Bearish Reversal، Conflict؛ Score 0–100 با وزن‌های شفاف؛ فیلتر سشن/نوسان/خبر/کیفیت داده؛ Cooldown؛ immutable |
-| UI | پروفایل‌ها (در محل + پنل چپ/راست)، خطوط POC روزانه/هفتگی با رنگ جدا، markers، فلش‌ها، پنل CVD جدا، داشبورد (Volume, Buy, Sell, Delta, RVOL, POC, Signal state, Data quality, Perf) |
+| UI | Footprint داخل کندل (Bid x Ask / Delta / Volume با برجسته‌سازی Imbalance)، پروفایل‌ها (در محل + پنل چپ/راست)، خطوط POC روزانه/هفتگی با رنگ جدا، markers، فلش‌ها، پنل CVD جدا، داشبورد (Volume, Buy, Sell, Delta, RVOL, POC, Signal state, Data quality, Perf) |
 | Alerts | معامله/Cluster بزرگ، Imbalance، واگرایی، سیگنال، عبور/لمس POC، Absorption، کیفیت داده؛ Cooldown؛ صوتی و تصویری |
 | Validation | لاگ CSV سیگنال/نتیجه/رویداد، `tools/analyze_signals.py` (In/Out-of-sample، bootstrap CI، کالیبراسیون) |
 

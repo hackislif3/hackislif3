@@ -57,6 +57,7 @@ namespace NinjaTrader.NinjaScript.Indicators
         private readonly Dictionary<string, SharpDX.Direct2D1.SolidColorBrush> dxBrushes = new Dictionary<string, SharpDX.Direct2D1.SolidColorBrush>();
         private SharpDX.DirectWrite.TextFormat textFormat;
         private SharpDX.DirectWrite.TextFormat smallFormat;
+        private SharpDX.DirectWrite.TextFormat footFormat;
         private SharpDX.Direct2D1.StrokeStyle dashStyle;
         private ProfileStats rangeStats;
         private int rangeFrom = -1, rangeTo = -1;
@@ -136,6 +137,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 DisposeDx();
                 if (textFormat != null) { textFormat.Dispose(); textFormat = null; }
                 if (smallFormat != null) { smallFormat.Dispose(); smallFormat = null; }
+                if (footFormat != null) { footFormat.Dispose(); footFormat = null; }
             }
         }
 
@@ -548,7 +550,8 @@ namespace NinjaTrader.NinjaScript.Indicators
                     EnsureResources();
                     RenderTarget.AntialiasMode = SharpDX.Direct2D1.AntialiasMode.PerPrimitive;
                     int from = Math.Max(0, ChartBars.FromIndex), to = ChartBars.ToIndex;
-                    if (EnableProfiles && ShowSessionProfiles) RenderInPlaceProfiles(chartControl, chartScale, from, to);
+                    if (ShowFootprint) RenderFootprints(chartControl, chartScale, from, to);
+                    if (EnableProfiles && ShowSessionProfiles && !ShowFootprint) RenderInPlaceProfiles(chartControl, chartScale, from, to);
                     if (EnableProfiles && PanelSource != GofPanelProfileSource.None) RenderPanelProfile(chartControl, chartScale, from, to);
                     if (EnableProfiles) RenderLevels(chartControl, chartScale, from, to);
                     if (ShowImbalanceZones) RenderZones(chartControl, chartScale, from, to);
@@ -747,6 +750,98 @@ namespace NinjaTrader.NinjaScript.Indicators
                     if (r != null && prev != null && !double.IsNaN(r.DayPoc) && !double.IsNaN(prev.DayPoc) && r.CvdResetId == prev.CvdResetId)
                         RenderTarget.DrawLine(new SharpDX.Vector2(X(cc, prev.Bar), Y(cs, prev.DayPoc)), new SharpDX.Vector2(X(cc, r.Bar), Y(cs, r.DayPoc)), b, 1f);
                     prev = r;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Footprint: executed volume at every price inside each bar, split into sell (at bid) x buy (at ask).
+        /// Uses the same classified prints as every other module; bars older than "Max footprint bars kept" are not drawn.
+        /// Numbers are only drawn when a price row is tall enough and the bar wide enough; otherwise cells are drawn as a heat map.
+        /// </summary>
+        private void RenderFootprints(ChartControl cc, ChartScale cs, int from, int to)
+        {
+            double ts = TickSize;
+            float cellW = Math.Max(3f, cc.Properties.BarDistance * 0.92f);
+            float rowH = Math.Abs(Y(cs, cs.MinValue) - Y(cs, cs.MinValue + ts));
+            if (rowH < 1f) return;
+            if (footFormat == null || Math.Abs(footFormat.FontSize - (float)FootprintFontSize) > 0.01f)
+            {
+                if (footFormat != null) footFormat.Dispose();
+                footFormat = new SharpDX.DirectWrite.TextFormat(NinjaTrader.Core.Globals.DirectWriteFactory, "Consolas",
+                    SharpDX.DirectWrite.FontWeight.Normal, SharpDX.DirectWrite.FontStyle.Normal, (float)FootprintFontSize);
+                footFormat.TextAlignment = SharpDX.DirectWrite.TextAlignment.Center;
+                footFormat.ParagraphAlignment = SharpDX.DirectWrite.ParagraphAlignment.Center;
+                footFormat.WordWrapping = SharpDX.DirectWrite.WordWrapping.NoWrap;
+            }
+            bool drawText = rowH >= FootprintMinRowPixels && cellW >= FootprintMinBarPixels;
+            double ratio = engine.Settings.Bars.ImbalanceRatio;
+            long minImb = engine.Settings.Bars.ImbalanceMinVolume;
+            double top = cs.MaxValue, bottom = cs.MinValue;
+            SharpDX.Direct2D1.SolidColorBrush back = Dx(cc.Properties.ChartBackground, 100);
+            SharpDX.Direct2D1.SolidColorBrush text = Dx(TextBrush, 100);
+            SharpDX.Direct2D1.SolidColorBrush buyText = Dx(BuyBrush, 100);
+            SharpDX.Direct2D1.SolidColorBrush sellText = Dx(SellBrush, 100);
+            SharpDX.Direct2D1.SolidColorBrush pocLine = Dx(PocBrush, 100);
+
+            for (int bar = from; bar <= to; bar++)
+            {
+                BarFootprint f = engine.Footprints.Get(bar);
+                if (f == null || !f.Ladder.HasData) continue;
+                PriceLadder l = f.Ladder;
+                long maxVol = 1, maxAbsDelta = 1, pocTick = l.MinTick;
+                for (long t = l.MinTick; t <= l.MaxTick; t++)
+                {
+                    long v = l.VolumeAt(t);
+                    if (v > maxVol) { maxVol = v; pocTick = t; }
+                    long d = Math.Abs(l.BuyAt(t) - l.SellAt(t));
+                    if (d > maxAbsDelta) maxAbsDelta = d;
+                }
+                float x0 = X(cc, bar) - cellW / 2f;
+                for (long t = l.MinTick; t <= l.MaxTick; t++)
+                {
+                    double price = t * ts;
+                    if (price - ts / 2 > top || price + ts / 2 < bottom) continue;
+                    float y = Y(cs, price + ts / 2);
+                    SharpDX.RectangleF cell = new SharpDX.RectangleF(x0, y, cellW, Math.Max(1f, rowH - (rowH > 4 ? 1f : 0f)));
+                    long b = l.BuyAt(t), sl = l.SellAt(t), v = l.VolumeAt(t);
+                    if (FootprintOpaque) RenderTarget.FillRectangle(cell, back);
+                    if (v > 0)
+                    {
+                        Brush cb;
+                        double intensity;
+                        if (FootprintMode == GofFootprintMode.Volume) { cb = ProfileBrush; intensity = (double)v / maxVol; }
+                        else { cb = b >= sl ? BuyBrush : SellBrush; intensity = (double)Math.Abs(b - sl) / maxAbsDelta; }
+                        RenderTarget.FillRectangle(cell, Dx(cb, FootprintCellOpacity * (0.15 + 0.85 * intensity)));
+                    }
+                    if (t == pocTick) RenderTarget.DrawRectangle(cell, pocLine, 1f);
+                    if (!drawText || v == 0) continue;
+
+                    bool buyImb = FootprintHighlightImbalance && b >= minImb && b >= ratio * l.SellAt(t - 1);
+                    bool sellImb = FootprintHighlightImbalance && sl >= minImb && sl >= ratio * l.BuyAt(t + 1);
+                    if (FootprintMode == GofFootprintMode.BidAsk)
+                    {
+                        SharpDX.RectangleF left = new SharpDX.RectangleF(x0, y, cellW / 2f - 3f, rowH);
+                        SharpDX.RectangleF right = new SharpDX.RectangleF(x0 + cellW / 2f + 3f, y, cellW / 2f - 3f, rowH);
+                        RenderTarget.DrawText(sl.ToString(CultureInfo.InvariantCulture), footFormat, left, sellImb ? sellText : text);
+                        RenderTarget.DrawText("x", footFormat, new SharpDX.RectangleF(x0, y, cellW, rowH), Dx(NeutralBrush, 100));
+                        RenderTarget.DrawText(b.ToString(CultureInfo.InvariantCulture), footFormat, right, buyImb ? buyText : text);
+                    }
+                    else
+                    {
+                        long val = FootprintMode == GofFootprintMode.Delta ? b - sl : v;
+                        SharpDX.Direct2D1.SolidColorBrush tb = FootprintMode == GofFootprintMode.Delta ? (val >= 0 ? buyText : sellText) : text;
+                        RenderTarget.DrawText(val.ToString(CultureInfo.InvariantCulture), footFormat, cell, tb);
+                    }
+                }
+                if (FootprintShowTotals && drawText)
+                {
+                    float yb = Y(cs, (l.MinTick - 0.5) * ts) + 2f;
+                    long d = f.Delta;
+                    SharpDX.RectangleF r1 = new SharpDX.RectangleF(x0, yb, cellW, (float)FootprintFontSize + 4f);
+                    SharpDX.RectangleF r2 = new SharpDX.RectangleF(x0, yb + (float)FootprintFontSize + 4f, cellW, (float)FootprintFontSize + 4f);
+                    RenderTarget.DrawText("\u0394 " + d.ToString(CultureInfo.InvariantCulture), footFormat, r1, d >= 0 ? buyText : sellText);
+                    RenderTarget.DrawText("V " + f.Volume.ToString(CultureInfo.InvariantCulture), footFormat, r2, text);
                 }
             }
         }
@@ -1162,6 +1257,16 @@ namespace NinjaTrader.NinjaScript.Indicators
             LogHistorical = true;
             LogFolder = string.Empty;
             OutcomeHorizons = "5,10,20";
+
+            ShowFootprint = false;
+            FootprintMode = GofFootprintMode.BidAsk;
+            FootprintOpaque = true;
+            FootprintFontSize = 9;
+            FootprintMinRowPixels = 11;
+            FootprintMinBarPixels = 50;
+            FootprintCellOpacity = 45;
+            FootprintHighlightImbalance = true;
+            FootprintShowTotals = true;
         }
         #endregion
 
@@ -1446,6 +1551,17 @@ namespace NinjaTrader.NinjaScript.Indicators
         [Browsable(false)] public string DashboardBackBrushSerializable { get { return Serialize.BrushToString(DashboardBackBrush); } set { DashboardBackBrush = Serialize.StringToBrush(value); } }
         [XmlIgnore] [Display(Name = "Text", Order = 28, GroupName = "13. Visual")] public Brush TextBrush { get; set; }
         [Browsable(false)] public string TextBrushSerializable { get { return Serialize.BrushToString(TextBrush); } set { TextBrush = Serialize.StringToBrush(value); } }
+
+        // ---------------- 15. Footprint (volume at price inside each bar)
+        [Display(Name = "Show footprint", Description = "Draws sell x buy volume at every price inside each bar (replaces the in-place daily profiles while on).", Order = 1, GroupName = "15. Footprint")] public bool ShowFootprint { get; set; }
+        [Display(Name = "Footprint mode", Description = "BidAsk: sell x buy. Delta: buy - sell. Volume: total.", Order = 2, GroupName = "15. Footprint")] public GofFootprintMode FootprintMode { get; set; }
+        [Display(Name = "Hide candles behind cells", Order = 3, GroupName = "15. Footprint")] public bool FootprintOpaque { get; set; }
+        [Range(6, 20)] [Display(Name = "Font size", Order = 4, GroupName = "15. Footprint")] public double FootprintFontSize { get; set; }
+        [Range(4, 60)] [Display(Name = "Min row height for numbers (px)", Order = 5, GroupName = "15. Footprint")] public double FootprintMinRowPixels { get; set; }
+        [Range(10, 400)] [Display(Name = "Min bar width for numbers (px)", Order = 6, GroupName = "15. Footprint")] public double FootprintMinBarPixels { get; set; }
+        [Range(0, 100)] [Display(Name = "Cell opacity %", Order = 7, GroupName = "15. Footprint")] public double FootprintCellOpacity { get; set; }
+        [Display(Name = "Highlight diagonal imbalances", Description = "Uses the imbalance ratio / min volume from group 07.", Order = 8, GroupName = "15. Footprint")] public bool FootprintHighlightImbalance { get; set; }
+        [Display(Name = "Show bar delta / volume", Order = 9, GroupName = "15. Footprint")] public bool FootprintShowTotals { get; set; }
 
         // ---------------- 14. Logging / validation
         [Display(Name = "Write CSV logs", Description = "signals_*.csv, outcomes_*.csv, events_*.csv in Documents\\NinjaTrader 8\\GoldOrderFlow", Order = 1, GroupName = "14. Logging")] public bool EnableCsvLog { get; set; }

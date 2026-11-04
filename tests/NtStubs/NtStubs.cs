@@ -89,6 +89,7 @@ namespace SharpDX.Direct2D1
         public void FillGeometry(Geometry g, Brush b) { }
         public void DrawGeometry(Geometry g, Brush b, float w) { }
         public void DrawTextLayout(SharpDX.Vector2 p, SharpDX.DirectWrite.TextLayout l, Brush b) { }
+        public void DrawText(string text, SharpDX.DirectWrite.TextFormat f, SharpDX.RectangleF r, Brush b) { }
     }
 }
 
@@ -96,12 +97,18 @@ namespace SharpDX.DirectWrite
 {
     public enum FontWeight { Normal, Bold }
     public enum FontStyle { Normal, Italic }
+    public enum TextAlignment { Leading, Trailing, Center, Justified }
+    public enum ParagraphAlignment { Near, Far, Center }
+    public enum WordWrapping { Wrap, NoWrap }
     public class Factory : SharpDX.DisposeBase { }
     public class TextFormat : SharpDX.DisposeBase
     {
         public TextFormat(Factory f, string family, float size) { FontSize = size; }
         public TextFormat(Factory f, string family, FontWeight w, FontStyle s, float size) { FontSize = size; }
         public float FontSize { get; private set; }
+        public TextAlignment TextAlignment { get; set; }
+        public ParagraphAlignment ParagraphAlignment { get; set; }
+        public WordWrapping WordWrapping { get; set; }
     }
     public struct TextMetrics { public float Width, Height; }
     public class TextLayout : SharpDX.DisposeBase
@@ -175,8 +182,14 @@ namespace NinjaTrader.Gui.Chart
 {
     public class ChartBars { public int FromIndex; public int ToIndex; }
     public class ChartPanel { public int X, Y, W, H; }
+    public class ChartControlProperties
+    {
+        public float BarDistance { get; set; }
+        public System.Windows.Media.Brush ChartBackground { get; set; }
+    }
     public class ChartControl
     {
+        public ChartControlProperties Properties { get { return null; } }
         public int GetXByBarIndex(ChartBars b, int idx) { return idx; }
         public int GetBarPaintWidth(ChartBars b) { return 5; }
     }

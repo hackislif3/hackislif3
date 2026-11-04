@@ -20,5 +20,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
 
     public enum GofCorner { TopLeft = 0, TopRight = 1, BottomLeft = 2, BottomRight = 3 }
 
+    public enum GofFootprintMode { BidAsk = 0, Delta = 1, Volume = 2 }
+
     public enum GofCvdPanelMode { CvdCandles = 0, CvdLine = 1, BarDelta = 2, DeltaPercent = 3 }
 }
