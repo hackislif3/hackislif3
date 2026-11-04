@@ -794,7 +794,10 @@ namespace NinjaTrader.NinjaScript.Indicators
             long minImb = engine.Settings.Bars.ImbalanceMinVolume;
             double top = cs.MaxValue, bottom = cs.MinValue;
             SharpDX.Direct2D1.SolidColorBrush back = Dx(cc.Properties.ChartBackground, 100);
-            SharpDX.Direct2D1.SolidColorBrush text = Dx(TextBrush, 100);
+            // numbers are drawn directly on the chart background: pick black/white automatically for contrast
+            SolidColorBrush bgb = cc.Properties.ChartBackground as SolidColorBrush;
+            bool lightBg = bgb != null && (0.299 * bgb.Color.R + 0.587 * bgb.Color.G + 0.114 * bgb.Color.B) > 140;
+            SharpDX.Direct2D1.SolidColorBrush text = FootprintAutoTextColor ? Dx(lightBg ? Brushes.Black : Brushes.WhiteSmoke, 100) : Dx(TextBrush, 100);
             SharpDX.Direct2D1.SolidColorBrush buyText = Dx(BuyBrush, 100);
             SharpDX.Direct2D1.SolidColorBrush sellText = Dx(SellBrush, 100);
             SharpDX.Direct2D1.SolidColorBrush buyFill = Dx(BuyBrush, FootprintImbalanceOpacity);
@@ -1305,6 +1308,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             FootprintMode = GofFootprintMode.BidAsk;
             FootprintStyle = GofFootprintStyle.Classic;
             FootprintImbalanceOpacity = 70;
+            FootprintAutoTextColor = true;
             FootprintOpaque = true;
             FootprintFontSize = 9;
             FootprintMinRowPixels = 11;
@@ -1602,6 +1606,7 @@ namespace NinjaTrader.NinjaScript.Indicators
         [Display(Name = "Footprint mode", Description = "BidAsk: sell x buy contracts. TradeCount: sell x buy number of trades (prints, not orders). Delta: buy - sell. Volume: total.", Order = 2, GroupName = "15. Footprint")] public GofFootprintMode FootprintMode { get; set; }
         [Display(Name = "Footprint style", Description = "Classic: neutral cells, colour only on imbalances, candle strip. Heatmap: cells coloured by delta/volume.", Order = 10, GroupName = "15. Footprint")] public GofFootprintStyle FootprintStyle { get; set; }
         [Range(0, 100)] [Display(Name = "Imbalance fill opacity %", Order = 11, GroupName = "15. Footprint")] public double FootprintImbalanceOpacity { get; set; }
+        [Display(Name = "Auto text color", Description = "Black numbers on a light chart background, white on a dark one. Off: use the Text color of group 13.", Order = 12, GroupName = "15. Footprint")] public bool FootprintAutoTextColor { get; set; }
         [Display(Name = "Hide candles behind cells", Order = 3, GroupName = "15. Footprint")] public bool FootprintOpaque { get; set; }
         [Range(6, 20)] [Display(Name = "Font size", Order = 4, GroupName = "15. Footprint")] public double FootprintFontSize { get; set; }
         [Range(4, 60)] [Display(Name = "Min row height for numbers (px)", Order = 5, GroupName = "15. Footprint")] public double FootprintMinRowPixels { get; set; }
