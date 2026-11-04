@@ -270,6 +270,9 @@ internal static class Program
         for (int i = 0; i < 50; i++) e.ProcessTrade(Pr(d1.AddSeconds(i), 2000.0, 5, 1999.9, 2000.0), 0);
         e.ProcessTrade(Pr(d1.AddSeconds(60), 2001.0, 1, 2000.9, 2001.0), 0);
         e.FinalizeBar(0, d1.AddMinutes(1), 2000, 2001, 2000, 2001, 251);
+        BarFootprint fp0 = e.Footprints.Get(0);
+        Check(fp0.Trades.TotalBuy == 51 && fp0.Trades.BuyAt(20000) == 50 && fp0.Ladder.TotalBuy == 251,
+              "footprint keeps trade (print) counts separately from contract volume");
         DateTime d2 = new DateTime(2026, 1, 6, 9, 0, 0);
         e.OnSessionStart(d2.Date, d2, 1);
         e.BeginBar(1, d2);

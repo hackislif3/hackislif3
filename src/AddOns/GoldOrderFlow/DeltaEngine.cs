@@ -10,6 +10,10 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
         public int Bar;
         public DateTime Time;
         public readonly PriceLadder Ladder = new PriceLadder(32);
+        /// <summary>Number of executed prints (trades as reported by the feed) per price and aggressor side.
+        /// A print count is NOT an order count: one aggressive order can fill as several prints, and resting
+        /// (passive) orders are not visible in trade data.</summary>
+        public readonly PriceLadder Trades = new PriceLadder(32);
         public int Prints;
         public long ExactVolume;
         public long InsideVolume;

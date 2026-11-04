@@ -20,7 +20,11 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
 
     public enum GofCorner { TopLeft = 0, TopRight = 1, BottomLeft = 2, BottomRight = 3 }
 
-    public enum GofFootprintMode { BidAsk = 0, Delta = 1, Volume = 2 }
+    /// <summary>BidAsk: sell x buy contracts. TradeCount: sell x buy number of prints (not orders). Delta: buy - sell. Volume: total.</summary>
+    public enum GofFootprintMode { BidAsk = 0, TradeCount = 1, Delta = 2, Volume = 3 }
+
+    /// <summary>Classic: neutral cells, colour only on imbalances, candle strip on the left. Heatmap: cells coloured by delta/volume.</summary>
+    public enum GofFootprintStyle { Classic = 0, Heatmap = 1 }
 
     public enum GofCvdPanelMode { CvdCandles = 0, CvdLine = 1, BarDelta = 2, DeltaPercent = 3 }
 }

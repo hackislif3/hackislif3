@@ -156,7 +156,12 @@ namespace NinjaTrader.Data
         public MarketDataType MarketDataType; public NinjaTrader.Cbi.Operation Operation; public int Position; public double Price; public long Volume; public DateTime Time;
     }
     public class BarsPeriod { public BarsPeriodType BarsPeriodType; public int Value; }
-    public class Bars { public bool IsTickReplay; public bool IsFirstBarOfSession; }
+    public class Bars
+    {
+        public bool IsTickReplay; public bool IsFirstBarOfSession; public int Count;
+        public double GetOpen(int i) { return 0; } public double GetHigh(int i) { return 0; }
+        public double GetLow(int i) { return 0; } public double GetClose(int i) { return 0; }
+    }
     public class SessionIterator
     {
         public SessionIterator(Bars b) { }

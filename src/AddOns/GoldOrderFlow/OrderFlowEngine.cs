@@ -212,6 +212,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
 
             BarFootprint f = Current;
             f.Ladder.Add(t.Tick, t.Volume, t.Side);
+            f.Trades.Add(t.Tick, 1, t.Side);
             f.Prints++;
             if (t.Volume > f.MaxPrint) f.MaxPrint = t.Volume;
             switch (t.Source)
