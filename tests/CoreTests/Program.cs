@@ -30,6 +30,7 @@ internal static class Program
         AbsorptionTest();
         DeterminismTest();
         NewsTest();
+        PerfTest();
         Console.WriteLine();
         Console.WriteLine("passed " + passes + ", failed " + failures);
         return failures == 0 ? 0 : 1;
@@ -442,6 +443,18 @@ internal static class Program
             sb.Append("POC " + st.PocPrice(0.1).ToString(CultureInfo.InvariantCulture) + " VA " + st.ValPrice(0.1).ToString(CultureInfo.InvariantCulture) + "-" + st.VahPrice(0.1).ToString(CultureInfo.InvariantCulture) + ";");
         }
         return sb.ToString();
+    }
+
+    private static void PerfTest()
+    {
+        Console.WriteLine("[Performance]");
+        List<TradePrint> prints = Synthetic(20, 3);
+        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        string r = RunEngine(prints, true);
+        sw.Stop();
+        double us = sw.Elapsed.TotalMilliseconds * 1000.0 / prints.Count;
+        Console.WriteLine("    " + prints.Count + " prints, " + sw.ElapsedMilliseconds + " ms total, " + us.ToString("0.00", CultureInfo.InvariantCulture) + " us/print (incl. bar finalization)");
+        Check(us < 50 && r.Length > 0, "throughput well above GC peak print rates");
     }
 
     private static void NewsTest()

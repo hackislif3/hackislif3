@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Type-checks the NinjaScript indicators against API stubs with C# 5 syntax. Not a runtime test. -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>5</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/AddOns/GoldOrderFlow/*.cs" />
+    <Compile Include="../../src/Indicators/GoldOrderFlow/*.cs" />
+    <Compile Include="../NtStubs/NtStubs.cs" />
+  </ItemGroup>
+</Project>

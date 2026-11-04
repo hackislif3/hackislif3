@@ -1,0 +1,14 @@
+name: core-tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Core engine tests (C# 5)
+        run: dotnet run --project tests/CoreTests -c Release
+      - name: NinjaScript type-check against API stubs (C# 5)
+        run: dotnet build tests/NtCompileCheck -c Release
