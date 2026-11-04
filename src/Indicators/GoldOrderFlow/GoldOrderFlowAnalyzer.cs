@@ -609,14 +609,14 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         private void RenderInPlaceProfiles(ChartControl cc, ChartScale cs, int from, int to)
         {
-            List<VolumeProfile> list = new List<VolumeProfile>();
-            List<VolumeProfile> done = engine.Profiles.CompletedDays;
+            List<GofVolumeProfile> list = new List<GofVolumeProfile>();
+            List<GofVolumeProfile> done = engine.Profiles.CompletedDays;
             for (int i = Math.Max(0, done.Count - ProfilesToShow); i < done.Count; i++) list.Add(done[i]);
             if (engine.Profiles.CurrentDay != null) list.Add(engine.Profiles.CurrentDay);
             float bw = Math.Max(1, cc.GetBarPaintWidth(ChartBars));
             for (int i = 0; i < list.Count; i++)
             {
-                VolumeProfile p = list[i];
+                GofVolumeProfile p = list[i];
                 if (p.StartBar < 0 || p.EndBar < from || p.StartBar > to) continue;
                 float x0 = X(cc, p.StartBar) - bw / 2f;
                 float x1 = X(cc, p.EndBar) + bw / 2f;

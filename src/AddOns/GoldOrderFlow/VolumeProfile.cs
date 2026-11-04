@@ -317,7 +317,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
     }
 
     /// <summary>A profile over a period (session/day/week/sub-session/fixed range).</summary>
-    public sealed class VolumeProfile
+    public sealed class GofVolumeProfile
     {
         public ProfileKind Kind;
         public string Label;
@@ -332,7 +332,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
         private bool dirty = true;
         private int version;
 
-        public VolumeProfile(ProfileKind kind, string label, DateTime tradingDay, int startBar, int capacity)
+        public GofVolumeProfile(ProfileKind kind, string label, DateTime tradingDay, int startBar, int capacity)
         {
             Kind = kind;
             Label = label;
@@ -401,30 +401,30 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
         public bool TrackSubSessions = true;
         public DateTime ContractStartFilter = DateTime.MinValue; // levels from before this trading day are dropped (rollover)
 
-        public VolumeProfile CurrentSession;
-        public VolumeProfile CurrentDay;
-        public VolumeProfile CurrentWeek;
-        public VolumeProfile FixedRange;
+        public GofVolumeProfile CurrentSession;
+        public GofVolumeProfile CurrentDay;
+        public GofVolumeProfile CurrentWeek;
+        public GofVolumeProfile FixedRange;
         public DateTime FixedStart = DateTime.MinValue;
         public DateTime FixedEnd = DateTime.MinValue;
 
-        public readonly List<VolumeProfile> CompletedDays = new List<VolumeProfile>();
-        public readonly List<VolumeProfile> CompletedWeeks = new List<VolumeProfile>();
-        public readonly List<VolumeProfile> CompletedSessions = new List<VolumeProfile>();
-        public readonly List<VolumeProfile> CompletedSubSessions = new List<VolumeProfile>();
-        public readonly Dictionary<string, VolumeProfile> ActiveSubSessions = new Dictionary<string, VolumeProfile>();
+        public readonly List<GofVolumeProfile> CompletedDays = new List<GofVolumeProfile>();
+        public readonly List<GofVolumeProfile> CompletedWeeks = new List<GofVolumeProfile>();
+        public readonly List<GofVolumeProfile> CompletedSessions = new List<GofVolumeProfile>();
+        public readonly List<GofVolumeProfile> CompletedSubSessions = new List<GofVolumeProfile>();
+        public readonly Dictionary<string, GofVolumeProfile> ActiveSubSessions = new Dictionary<string, GofVolumeProfile>();
         private readonly Dictionary<string, string> activeSubKeys = new Dictionary<string, string>();
         public readonly List<VirginLevel> VirginLevels = new List<VirginLevel>();
         public double TickSize = 0.1;
 
-        public VolumeProfile PreviousDay { get { return CompletedDays.Count > 0 ? CompletedDays[CompletedDays.Count - 1] : null; } }
-        public VolumeProfile PreviousWeek { get { return CompletedWeeks.Count > 0 ? CompletedWeeks[CompletedWeeks.Count - 1] : null; } }
+        public GofVolumeProfile PreviousDay { get { return CompletedDays.Count > 0 ? CompletedDays[CompletedDays.Count - 1] : null; } }
+        public GofVolumeProfile PreviousWeek { get { return CompletedWeeks.Count > 0 ? CompletedWeeks[CompletedWeeks.Count - 1] : null; } }
 
         public void ConfigureFixedRange(DateTime start, DateTime end)
         {
             FixedStart = start;
             FixedEnd = end;
-            FixedRange = (end > start) ? new VolumeProfile(ProfileKind.Fixed, "Fixed", start.Date, -1, 256) : null;
+            FixedRange = (end > start) ? new GofVolumeProfile(ProfileKind.Fixed, "Fixed", start.Date, -1, 256) : null;
         }
 
         public void OnSessionStart(DateTime tradingDay, int bar, bool newDay, bool newWeek)
@@ -442,7 +442,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
                     RegisterVirgin(CurrentDay, DaySettings);
                     AddLimited(CompletedDays, CurrentDay, MaxHistoryDays);
                 }
-                CurrentDay = new VolumeProfile(ProfileKind.Day, tradingDay.ToString("yyyy-MM-dd"), tradingDay, bar, 512);
+                CurrentDay = new GofVolumeProfile(ProfileKind.Day, tradingDay.ToString("yyyy-MM-dd"), tradingDay, bar, 512);
             }
             if (newWeek || CurrentWeek == null)
             {
@@ -452,18 +452,18 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
                     RegisterVirgin(CurrentWeek, WeekSettings);
                     AddLimited(CompletedWeeks, CurrentWeek, MaxHistoryWeeks);
                 }
-                CurrentWeek = new VolumeProfile(ProfileKind.Week, "W " + PriceMath.WeekStart(tradingDay).ToString("yyyy-MM-dd"), tradingDay, bar, 1024);
+                CurrentWeek = new GofVolumeProfile(ProfileKind.Week, "W " + PriceMath.WeekStart(tradingDay).ToString("yyyy-MM-dd"), tradingDay, bar, 1024);
             }
-            CurrentSession = new VolumeProfile(ProfileKind.Session, tradingDay.ToString("yyyy-MM-dd"), tradingDay, bar, 512);
+            CurrentSession = new GofVolumeProfile(ProfileKind.Session, tradingDay.ToString("yyyy-MM-dd"), tradingDay, bar, 512);
         }
 
-        private static void AddLimited(List<VolumeProfile> list, VolumeProfile p, int max)
+        private static void AddLimited(List<GofVolumeProfile> list, GofVolumeProfile p, int max)
         {
             list.Add(p);
             while (list.Count > Math.Max(1, max)) list.RemoveAt(0);
         }
 
-        private void RegisterVirgin(VolumeProfile p, ProfileSettings s)
+        private void RegisterVirgin(GofVolumeProfile p, ProfileSettings s)
         {
             if (p.TradingDay < ContractStartFilter) return;
             ProfileStats st = p.GetStats(s);
@@ -520,7 +520,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
                 for (int i = 0; i < windows.Count; i++)
                 {
                     WindowInstance w = windows[i];
-                    VolumeProfile sp;
+                    GofVolumeProfile sp;
                     string key;
                     if (!ActiveSubSessions.TryGetValue(w.Def.Name, out sp) || !activeSubKeys.TryGetValue(w.Def.Name, out key) || key != w.Key)
                     {
@@ -529,7 +529,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
                             sp.IsComplete = true;
                             AddLimited(CompletedSubSessions, sp, MaxHistorySubSessions);
                         }
-                        sp = new VolumeProfile(ProfileKind.SubSession, w.Def.Name, w.LocalStart.Date, bar, 256);
+                        sp = new GofVolumeProfile(ProfileKind.SubSession, w.Def.Name, w.LocalStart.Date, bar, 256);
                         ActiveSubSessions[w.Def.Name] = sp;
                         activeSubKeys[w.Def.Name] = w.Key;
                     }
@@ -545,9 +545,9 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
             if (CurrentWeek != null) CurrentWeek.TouchBar(bar);
         }
 
-        public VolumeProfile GetSubSession(string name)
+        public GofVolumeProfile GetSubSession(string name)
         {
-            VolumeProfile p;
+            GofVolumeProfile p;
             return ActiveSubSessions.TryGetValue(name, out p) ? p : null;
         }
     }

@@ -283,6 +283,27 @@ namespace NinjaTrader.Gui.NinjaScript
 namespace NinjaTrader.NinjaScript.Indicators
 {
     public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase { }
+
+    // Names of NinjaTrader's BUILT-IN indicators that live in this namespace. Inside it they hide same-named
+    // types from 'using' directives, so any GOF type with one of these names breaks the real compile.
+    public class VolumeProfile : Indicator { }
+    public class VolumeZones : Indicator { }
+    public class VolumeCounter : Indicator { }
+    public class VolumeUpDown : Indicator { }
+    public class BuySellVolume : Indicator { }
+    public class BuySellPressure : Indicator { }
+    public class BlockVolume : Indicator { }
+    public class OrderFlowCumulativeDelta : Indicator { }
+    public class OrderFlowVolumeProfile : Indicator { }
+    public class OrderFlowTradeDetector : Indicator { }
+    public class OrderFlowVWAP : Indicator { }
+    public class Range : Indicator { }
+    public class Swing : Indicator { }
+    public class ZigZag : Indicator { }
+    public class Pivots : Indicator { }
+    public class ATR : Indicator { }
+    public class VWMA : Indicator { }
+    public class PriceLine : Indicator { }
 }
 
 namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns

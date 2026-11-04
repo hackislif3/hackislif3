@@ -411,13 +411,13 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
                 for (int i = 0; i < day.HvnRows.Length; i++) { double p = day.RowCenterPrice(day.HvnRows[i], ts); c.ReferenceLevels.Add(p); c.HvnPrices.Add(p); }
                 for (int i = 0; i < day.LvnRows.Length; i++) c.ReferenceLevels.Add(day.RowCenterPrice(day.LvnRows[i], ts));
             }
-            VolumeProfile pd = Profiles.PreviousDay;
+            GofVolumeProfile pd = Profiles.PreviousDay;
             if (pd != null)
             {
                 ProfileStats s = pd.GetStats(Settings.DayProfile);
                 if (s.IsValid) { c.ReferenceLevels.Add(s.PocPrice(ts)); c.ReferenceLevels.Add(s.VahPrice(ts)); c.ReferenceLevels.Add(s.ValPrice(ts)); }
             }
-            VolumeProfile pw = Profiles.PreviousWeek;
+            GofVolumeProfile pw = Profiles.PreviousWeek;
             if (pw != null)
             {
                 ProfileStats s = pw.GetStats(Settings.WeekProfile);
@@ -438,7 +438,7 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
             }
         }
 
-        private double PocOf(VolumeProfile p, ProfileSettings s)
+        private double PocOf(GofVolumeProfile p, ProfileSettings s)
         {
             if (p == null) return double.NaN;
             ProfileStats st = p.GetStats(s);

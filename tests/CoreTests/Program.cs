@@ -437,7 +437,7 @@ internal static class Program
                   " div=" + e.Divergence.Events.Count + " zones=" + e.Zones.Count + ";");
         foreach (SignalRecord sr in e.Signals.Signals)
             sb.Append(sr.Bar + ":" + sr.Kind + ":" + sr.Score.ToString(CultureInfo.InvariantCulture) + ";");
-        foreach (VolumeProfile d in e.Profiles.CompletedDays)
+        foreach (GofVolumeProfile d in e.Profiles.CompletedDays)
         {
             ProfileStats st = d.GetStats(s.DayProfile);
             sb.Append("POC " + st.PocPrice(0.1).ToString(CultureInfo.InvariantCulture) + " VA " + st.ValPrice(0.1).ToString(CultureInfo.InvariantCulture) + "-" + st.VahPrice(0.1).ToString(CultureInfo.InvariantCulture) + ";");
