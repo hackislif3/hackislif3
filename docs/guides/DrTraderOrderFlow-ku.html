@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="ckb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ڕێبەری DrTraderOrderFlow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@500;700&family=Noto+Sans+Arabic:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: one reading column (RTL) with full-width dark "chart plates" that mirror the indicator's Dark theme. */
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --fg: #16191e;
+  --muted: #5b6472;
+  --line: #dde2ea;
+  --accent: #946400;
+  --accent-soft: #fbefd2;
+  --buy: #14855a;
+  --sell: #c93b45;
+  /* chart plate: same in both page themes, like the indicator's Dark theme */
+  --c-bg: #14181e;
+  --c-cell: #1b2028;
+  --c-va: #222a36;
+  --c-grid: #303744;
+  --c-text: #dee4ec;
+  --c-dim: #7c8594;
+  --c-buy: #26a678;
+  --c-sell: #e84855;
+  --c-poc: #f5be3c;
+  --c-tape: #5096ff;
+  --c-unf: #ffa032;
+  --font-display: "Noto Kufi Arabic", "Noto Sans Arabic", Tahoma, sans-serif;
+  --font-body: "Noto Sans Arabic", Tahoma, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1115; --surface: #161a20; --fg: #e7eaef; --muted: #9aa3b1; --line: #2a303a;
+    --accent: #e9b949; --accent-soft: #2e2715; --buy: #3cc28e; --sell: #ef6b74; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1115; --surface: #161a20; --fg: #e7eaef; --muted: #9aa3b1; --line: #2a303a;
+  --accent: #e9b949; --accent-soft: #2e2715; --buy: #3cc28e; --sell: #ef6b74; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.9;
+}
+.page {
+  direction: rtl; max-width: 980px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+  display: flex; flex-direction: column; gap: 56px;
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.5; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; }
+h2 { font-size: clamp(22px, 3.2vw, 28px); font-weight: 700; }
+h3 { font-size: 18px; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+section { display: flex; flex-direction: column; gap: 16px; }
+.kicker { font-family: var(--font-mono); font-size: 13px; letter-spacing: .04em; color: var(--accent); direction: ltr; text-align: right; }
+.lead { font-size: 18px; color: var(--muted); }
+.en { font-family: var(--font-mono); direction: ltr; unicode-bidi: isolate; font-size: .92em; }
+.hero { display: flex; flex-direction: column; gap: 14px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.fact { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 4px 12px; font-size: 14px; }
+.fact b { font-family: var(--font-mono); direction: ltr; unicode-bidi: isolate; }
+
+/* chart plates */
+.plate { background: var(--c-bg); border-radius: 10px; padding: 14px; overflow-x: auto; }
+.plate svg { display: block; direction: ltr; margin: 0 auto; max-width: none; }
+.caption { font-size: 14px; color: var(--muted); }
+
+/* numbered legend */
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.item header { display: flex; align-items: center; gap: 10px; }
+.badge { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--c-poc); color: #1a1405; font-family: var(--font-mono); font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+.swatch { flex: none; width: 34px; height: 20px; border-radius: 3px; background: var(--c-cell); position: relative; overflow: hidden; }
+.item .what { font-size: 15px; }
+.item .use { font-size: 15px; color: var(--muted); }
+.item .use b { color: var(--fg); }
+
+/* cell anatomy */
+.anatomy { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; direction: ltr; max-width: 640px; }
+.cellbig { background: var(--c-cell); border: 1px solid var(--c-grid); border-radius: 6px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-family: var(--font-mono); font-size: 34px; color: var(--c-text); padding: 10px 18px; gap: 14px; }
+.cellbig .x { color: var(--c-dim); font-size: 22px; }
+.side { direction: rtl; font-size: 15px; display: flex; flex-direction: column; gap: 2px; }
+.side b { font-family: var(--font-display); }
+.side.sell b { color: var(--sell); }
+.side.buy b { color: var(--buy); }
+.side.sell { text-align: left; }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: right; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--muted); }
+tr:last-child td { border-bottom: none; }
+td.k { font-family: var(--font-mono); direction: ltr; white-space: nowrap; font-weight: 700; color: var(--accent); }
+
+.patterns { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.pattern { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.pattern .plate { border-radius: 0; }
+.pattern .txt { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.pattern .txt .read { color: var(--muted); }
+
+.note { border-inline-start: 4px solid var(--accent); background: var(--accent-soft); padding: 14px 18px; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; }
+ol.steps { margin: 0; padding-inline-start: 22px; display: flex; flex-direction: column; gap: 6px; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+<style>
+/* additions for the OrderFlow guide: line colours = the indicator's default brushes */
+:root {
+  --o-profile: #708090; --o-varow: #4682b4; --o-gold: #ffd700; --o-wpoc: #00bfff; --o-pd: #ffa500; --o-pw: #9370db;
+  --o-virgin: #ff00ff; --o-valine: #b0c4de; --o-buy: #32cd32; --o-sell: #dc143c; --o-bull: #00ff00; --o-bear: #ff0000;
+  --o-abs: #ffff00; --o-neutral: #808080; --o-dash: #000000; --o-dtext: #f5f5f5;
+}
+.dash { background: var(--o-dash); color: var(--o-dtext); font-family: var(--font-mono); font-size: 13px; line-height: 1.7; border-radius: 8px; padding: 12px 14px; direction: ltr; overflow-x: auto; }
+.dash div { white-space: pre; display: flex; gap: 10px; align-items: baseline; }
+.dash .n { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--c-poc); color: #1a1405; font-weight: 700; font-size: 11px; display: inline-grid; place-items: center; }
+.dash .warn { color: #ff5a5a; }
+.dash .alert { color: var(--o-abs); }
+.kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.kind { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.kind .nm { font-family: var(--font-mono); direction: ltr; text-align: right; font-size: 13px; color: var(--accent); font-weight: 700; }
+.kind svg { direction: ltr; }
+.mini { background: var(--c-bg); border-radius: 8px; padding: 8px; display: flex; justify-content: center; }
+</style>
+
+</head>
+<body style="margin:0">
+<div class="page">
+
+  <header class="hero">
+    <div class="kicker">DrTraderOrderFlow · NinjaTrader 8 · COMEX Gold (GC)</div>
+    <h1>ڕێبەری DrTraderOrderFlow</h1>
+    <p class="lead">ئیندیکاتۆری سەرەکیی DrTrader لەسەر پەنەلی نرخ: پرۆفایلی قەبارە، ئاستەکانی POC و Value Area، مامەڵە گەورەکان، هەڵمژین، جیاوازیی CVD، ئاماژەکان، داشبۆرد و ئاگادارکردنەوەکان، هەمووی لە یەک شوێندا.</p>
+    <div class="facts">
+      <span class="fact">ڕەنگ و ناوەکان: <b>هەمان ڕێکخستنی بنەڕەتی</b></span>
+      <span class="fact">ئاماژە: <b>0–100</b></span>
+      <span class="fact">سنووری ئاماژە: <b>60</b></span>
+      <span class="fact">Value Area: <b>70%</b></span>
+    </div>
+  </header>
+
+  <section aria-labelledby="s-map">
+    <h2 id="s-map">نەخشەی چارتەکە</h2>
+    <p>وێنەی خوارەوە ڕۆژێکی نموونەی زێڕ نیشان دەدات بە هەموو بەشەکانی ئیندیکاتۆرەکە. ژمارە زەردەکان بەشەکانی «هێماکان» ی خوارەوە نیشان دەدەن. ڕەنگەکان هەمان ڕەنگی بنەڕەتیی ئیندیکاتۆرەکەن، تەنها پاشبنەمای چارتی تۆ لەوانەیە جیاواز بێت.</p>
+    <div class="plate" role="img" aria-label="چارتی نموونە بە ژمارەی هێماکان">
+      <svg id="chart"></svg>
+    </div>
+    <p class="caption">ژمارەکانی ناو وێنەکە نموونەن و داتای بازاڕی ڕاستەقینە نین.</p>
+  </section>
+
+  <section aria-labelledby="s-legend">
+    <h2 id="s-legend">هێماکان و واتاکانیان</h2>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section aria-labelledby="s-abs">
+    <h2 id="s-abs">دۆخەکانی هەڵمژین (Absorption)</h2>
+    <p>هەڵمژین کاتێکە کە فرۆشتن (یان کڕین) ی هێرشبەر زۆرە، بەڵام نرخ بە پێی ئەو هێزە ناجووڵێت و قەبارەی زۆر لە لێواری مۆمەکەدا کۆبۆتەوە. ئیندیکاتۆرەکە ئەمە وەک <b>کاندید</b> لە کاتی داخستنی مۆمەکەدا دیاری دەکات، پاشان دۆخەکەی بە ئاشکرا دەگۆڕێت:</p>
+    <div class="kinds" id="absKinds"></div>
+    <div class="note"><p>ئەمە تەنها لە مامەڵە جێبەجێکراوەکانەوە دەبینرێت و <b>بەڵگەی فەرمانی شاراوە (Iceberg) نییە</b>. کاندیدێک هەرگیز بە بێدەنگی ناسڕدرێتەوە؛ ئەگەر هەڵوەشێتەوە، بە خەتێکی خۆڵەمێشی دەمێنێتەوە.</p></div>
+  </section>
+
+  <section aria-labelledby="s-sig">
+    <h2 id="s-sig">ئاماژەکان (Signals)</h2>
+    <p>ئاماژەکان لە کۆکردنەوەی چەند بەڵگەیەک دروست دەبن، نەک لە یەک مەرج. هەر ئاماژەیەک <b>نمرەیەکی ٠ تا ١٠٠</b> ی هەیە. ئەم نمرەیە ڕیزبەندییە، <b>ئەگەری سەرکەوتن نییە</b>، تا ئەو کاتەی لەسەر داتای جیاواز تاقی دەکرێتەوە.</p>
+    <div class="kinds" id="sigKinds"></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>بەڵگە</th><th>بۆ ئاماژەی پاڵەپەستۆ (P)</th><th>بۆ ئاماژەی گەڕانەوە (R)</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Delta</td><td>Delta% و بەرزبوونەوەی Delta بەراورد بە هەمان کاتی ڕۆژانی پێشوو</td><td>گۆڕانی ئاراستەی Delta لە مۆمی پشتڕاستکردنەوەدا</td></tr>
+          <tr><td class="k">CVD</td><td>ڕەوتی CVD لە ١٠ مۆمی دواییدا</td><td>جیاوازیی CVD ی پشتڕاستکراوە</td></tr>
+          <tr><td class="k">Large</td><td>خاڵی کڕین/فرۆشتنی مامەڵە گەورەکان لە ٣ مۆمی دواییدا</td><td>مامەڵە گەورەکانی هەڵمژراو لە ئاستەکەدا</td></tr>
+          <tr><td class="k">Imbalance</td><td>Stacked Imbalance ی هاوئاراستە</td><td>—</td></tr>
+          <tr><td class="k">Absorption</td><td>—</td><td>هەڵمژینی پشتڕاستکراوە (گرنگترین بەڵگە)</td></tr>
+          <tr><td class="k">Location</td><td>داخستن لە سەرووی VAH یان POC (بۆ کڕین)</td><td>نزیکیی ئاستەکە لە VAL/VAH/POC/pdPOC/vPOC/HVN/LVN (٥ تیک)</td></tr>
+          <tr><td class="k">Price</td><td>داخستن لە سەرووی بەرزترینی مۆمی پێشوو</td><td>داخستن لە سەرووی بەرزترینی مۆمی کاندید</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>کەی ئاماژە دەردەکەوێت؟</h3>
+    <p>ئاماژە تەنها <b>دوای داخستنی مۆمەکە</b> دروست دەبێت و لەسەر هەمان مۆم دەکێشرێت. پاش دروستبوون هەرگیز ناگۆڕێت و ناسڕدرێتەوە (<span class="en">no repaint</span>). جیاوازیی CVD کاتێک دەناسرێتەوە کە ٣ مۆم دوای لوتکە یان بنەکە داخراون، بۆیە نیشانەی <span class="en">DIV</span> لەسەر مۆمی پشتڕاستکردنەوە دادەنرێت نەک لەسەر لوتکەکە.</p>
+    <h3>ئەستێرە (*) لە پاش نمرە</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>نیشانە</th><th>واتا</th></tr></thead>
+        <tbody>
+          <tr><td class="k">NEWS</td><td>ئاماژە لە ماوەی هەواڵێکی گرنگدا دروست بووە (بنەڕەت: نمرە × 0.5).</td></tr>
+          <tr><td class="k">HIGHVOL / LOWVOL</td><td>جووڵەی نرخ زۆر زیاتر یان کەمتر لە ئاسایی بووە (نمرە × 0.8).</td></tr>
+          <tr><td class="k">EST</td><td>داتای Bid/Ask ی مۆمەکە خەمڵاندنە. بە بنەڕەت لەم حاڵەتەدا هیچ ئاماژەیەک دروست نابێت.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>هەروەها نمرە بە پێی دانیشتن دەگۆڕێت: ئاسیا × 0.9، لەندەن و نیویۆرک × 1.0، کاتەکانی تر × 0.9. لە نێوان دوو ئاماژەی هاوئاراستەدا لانیکەم ٥ مۆم هەیە (<span class="en">Cooldown</span>).</p>
+  </section>
+
+  <section aria-labelledby="s-dash">
+    <h2 id="s-dash">داشبۆرد</h2>
+    <p>داشبۆرد لە گۆشەی سەرەوەی چەپی چارتەکەیە. هەر ڕیزێک واتایەکی هەیە:</p>
+    <div class="dash" id="dashMock"></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>#</th><th>ڕیز</th><th>واتا</th></tr></thead>
+        <tbody id="dashRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-alert">
+    <h2 id="s-alert">ئاگادارکردنەوەکان (Alerts)</h2>
+    <p>ئاگادارکردنەوەکان تەنها لە کاتی ڕاستەوخۆدا (<span class="en">Realtime</span>) کار دەکەن، بە دەنگ و لە پەنجەرەی <span class="en">Alerts</span> ی NinjaTrader دا. بۆ هەر جۆرێک و هەر ئاراستەیەک کاتێکی چاوەڕوانی هەیە (<span class="en">Cooldown</span>، بنەڕەت ٦٠ چرکە) بۆ ئەوەی دووبارە نەبنەوە.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>جۆر</th><th>کەی</th><th>بنەڕەت</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Signals</td><td>ئاماژەی پشتڕاستکراوە</td><td>چالاک</td></tr>
+          <tr><td class="k">Large trades</td><td>هەر مامەڵەیەکی گەورە (دەتوانیت کەمترین قەبارە دیاری بکەیت)</td><td>ناچالاک</td></tr>
+          <tr><td class="k">Clusters</td><td>کۆمەڵەی مامەڵە گەورەکان یان مامەڵەی دووبارە لە یەک نرخدا</td><td>چالاک</td></tr>
+          <tr><td class="k">Imbalance</td><td>Stacked Imbalance</td><td>ناچالاک</td></tr>
+          <tr><td class="k">Divergence</td><td>جیاوازیی CVD ی پشتڕاستکراوە</td><td>چالاک</td></tr>
+          <tr><td class="k">POC</td><td>تێپەڕینی نرخ یان دەستلێدانی POC ی ڕۆژانە/هەفتانە</td><td>چالاک</td></tr>
+          <tr><td class="k">Absorption</td><td>کاندید یان پشتڕاستکردنەوەی هەڵمژین</td><td>چالاک</td></tr>
+          <tr><td class="k">Data quality</td><td>بڕانی داتا لە کاتی بازاڕی چالاکدا</td><td>چالاک</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-sess">
+    <h2 id="s-sess">دانیشتنەکان و فلتەری هەواڵ</h2>
+    <p>هەر دانیشتنێک لە ناوچەی کاتیی خۆیدا پێناسە دەکرێت، بۆیە گۆڕینی کاتی هاوین و زستان بە دروستی هەژمار دەکرێت.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>دانیشتن</th><th>کات</th><th>ناوچەی کاتی</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Asia</td><td class="en">18:00–03:00</td><td>نیویۆرک</td></tr>
+          <tr><td class="k">London</td><td class="en">08:00–16:30</td><td>لەندەن</td></tr>
+          <tr><td class="k">NewYork</td><td class="en">08:00–17:00</td><td>نیویۆرک</td></tr>
+          <tr><td class="k">COMEX</td><td class="en">08:20–13:30</td><td>نیویۆرک (کاتە چالاکەکانی زێڕ)</td></tr>
+          <tr><td class="k">Overnight</td><td class="en">18:00–08:20</td><td>نیویۆرک</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>فلتەری هەواڵ:</b> ئیندیکاتۆرەکە ڕۆژژمێری ئابووری ناوەکی نییە. کاتی هەواڵە گرنگەکان (FOMC، CPI، PPI، NFP، PCE) خۆت لە گرووپی <span class="en">11. News Filter</span> دا دەنووسیت بەم شێوەیە:</p>
+    <div class="dash"><div>2026-12-09 14:00,FOMC; 2026-12-10 08:30,CPI</div></div>
+    <p>لە ماوەی ١٠ خولەک پێش و ٢٠ خولەک دوای هەواڵەکە، دەتوانیت نمرەی ئاماژەکان کەم بکەیتەوە (<span class="en">ReduceScore</span>)، ئاماژەکان ڕابگریت (<span class="en">SuppressSignals</span>)، یان ئاماژە و ئاگادارکردنەوەکان هەردووکیان ڕابگریت (<span class="en">SuppressSignalsAndAlerts</span>).</p>
+  </section>
+
+  <section aria-labelledby="s-set">
+    <h2 id="s-set">ڕێکخستنەکان</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>گرووپ</th><th>چی تێدایە</th></tr></thead>
+        <tbody>
+          <tr><td class="k">01. Data</td><td>سەرچاوەی داتا، ڕێسای ناو Spread، ڕێکخستنی ئامادەی GC/MGC، ڕێکەوتی دەستپێکردنی گرێبەست (بۆ Rollover).</td></tr>
+          <tr><td class="k">02. Volume Profile</td><td>ETH یان RTH، ڕێژەی Value Area، قەبارەی ڕیز، پرۆفایلی ڕۆژانە لەسەر مۆمەکان، پرۆفایلی لای ڕاست/چەپ (ڕۆژ، هەفتە، Visible، Fixed).</td></tr>
+          <tr><td class="k">03. Levels</td><td>پیشاندان یان شاردنەوەی هەر هێڵێک: dPOC، wPOC، ئاستەکانی ڕۆژ و هەفتەی پێشوو، VAH/VAL، HVN/LVN، vPOC.</td></tr>
+          <tr><td class="k">04. Sessions</td><td>کات و ناوچەی کاتیی هەر دانیشتنێک.</td></tr>
+          <tr><td class="k">05. Delta</td><td>کەی CVD سفر دەکرێتەوە: دانیشتن، ڕۆژ، هەفتە یان هەرگیز.</td></tr>
+          <tr><td class="k">06. Large Trades</td><td>سنووری دەستی یان خۆکار (سەدی ٩٩ ی قەبارەکان بە پێی کاتی ڕۆژ)، کۆکردنەوەی مامەڵەکان، Cluster.</td></tr>
+          <tr><td class="k">07. Imbalance &amp; Spikes</td><td>ڕێژەی Imbalance، کەمترین قەبارە، ژمارەی Stacked، سنووری بەرزبوونەوەی قەبارە و Delta.</td></tr>
+          <tr><td class="k">08. Absorption</td><td>مەرجەکانی کاندید، ژمارەی مۆمی پشتڕاستکردنەوە، تاقیکردنەوەی دووبارە (Retest).</td></tr>
+          <tr><td class="k">09. Divergence</td><td>هێزی Pivot (ژمارەی مۆم بۆ پشتڕاستکردنەوە)، دووریی نێوان دوو Pivot.</td></tr>
+          <tr><td class="k">10. Signals</td><td>سنووری نمرە، Conflict، Cooldown، کێشی هەر بەڵگەیەک، ڕێژەی دانیشتنەکان و جووڵە.</td></tr>
+          <tr><td class="k">11. News Filter</td><td>کاتی هەواڵەکان و چۆنیەتی کاردانەوە.</td></tr>
+          <tr><td class="k">12. Alerts</td><td>چالاککردنی هەر جۆرێک، Cooldown، فایلی دەنگ.</td></tr>
+          <tr><td class="k">13. Visual</td><td>داشبۆرد، قەبارەی فۆنت، هەموو ڕەنگەکان.</td></tr>
+          <tr><td class="k">14. Logging</td><td>نووسینی ئاماژە و ئەنجامەکان لە فایلی CSV بۆ شیکردنەوەی ئاماری.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-start">
+    <h2 id="s-start">دەستپێکردن</h2>
+    <ol class="steps">
+      <li>چارتی <span class="en">GC</span> (گرێبەستی چالاک) بکەرەوە، <span class="en">1 Minute</span> یان <span class="en">5 Minute</span>، بە <span class="en">Tick Replay</span>ی چالاک.</li>
+      <li><span class="en">DrTraderOrderFlow</span> زیاد بکە. بۆ CVD، <span class="en">DrTraderCumulativeDelta</span> لە پەنەلێکی جیادا زیاد بکە.</li>
+      <li>چاوەڕێ بکە تا داتاکان بار دەبن، پاشان سەیری ڕیزی <span class="en">Data</span> ی داشبۆرد بکە: دەبێت <span class="en">Exact</span> یان <span class="en">MostlyExact</span> بێت.</li>
+      <li>بۆ فێربوون، سەرەتا لە گرووپی <span class="en">10. Signals</span> دا <span class="en">Show signals</span> بکوژێنەوە و تەنها ئاستەکان و پرۆفایل بخوێنەوە. دوای ئەوە ئاماژەکان چالاک بکە.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="s-warn">
+    <h2 id="s-warn">ئاگاداری</h2>
+    <div class="note">
+      <p>ئاماژەکان و نمرەکانیان <b>ڕاسپاردەی کڕین و فرۆشتن نین</b>. تەنها کۆکردنەوەی بەڵگەکانن بە ڕێسایەکی ئاشکرا. پێش بەکارهێنانی ڕاستەقینە، ئەنجامەکانیان لەسەر داتای جیاواز (Out-of-Sample) تاقی بکەرەوە: گرووپی <span class="en">14. Logging</span> بۆ ئەم مەبەستەیە.</p>
+      <p>قەبارەی گەورە بە خۆکاری بە دامەزراوە داراییەکان یان «Smart Money» نادرێتە پاڵ. مامەڵە جێبەجێکراوەکان، فەرمانە چاوەڕوانەکانی دەفتەری فەرمان و نقدینگیی شاراوە سێ شتی جیاوازن.</p>
+      <p>ئەگەر داتاکە دواکەوتووە (<span class="en">Delayed</span>) یان لە <span class="en">Simulation</span> دایە، ئەنجامەکان بۆ فێربوونن نەک مامەڵەی ڕاستەقینە.</p>
+    </div>
+  </section>
+
+  <footer>DrTraderOrderFlow · ڕێبەری فێرکاری بۆ قوتابیان · ژمارەکانی ناو وێنەکان نموونەن و داتای بازاڕی ڕاستەقینە نین.</footer>
+</div>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg', FF = 'JetBrains Mono, Consolas, monospace';
+  function el(tag, attrs, parent, text) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  var V = function (n) { return 'var(--' + n + ')'; };
+
+  // ---------------- sample day (GC): [open, high, low, close]
+  var K = [[4036.0,4037.2,4035.4,4036.8],[4036.8,4037.6,4036.1,4036.3],[4036.3,4036.9,4034.8,4035.1],[4035.1,4035.6,4033.9,4034.2],
+           [4034.2,4034.8,4032.6,4033.0],[4033.0,4033.5,4031.8,4032.1],[4032.1,4032.9,4031.2,4031.6],[4031.6,4032.4,4030.6,4032.2],
+           [4032.2,4034.0,4032.0,4033.8],[4033.8,4035.0,4033.4,4034.7],[4034.7,4035.3,4034.0,4034.4],[4034.4,4036.2,4034.2,4036.0],
+           [4036.0,4038.4,4035.8,4038.2],[4038.2,4039.1,4037.6,4038.7],[4038.7,4039.6,4038.1,4039.3],[4039.3,4040.8,4039.0,4040.5],
+           [4040.5,4040.6,4039.4,4039.7],[4039.7,4040.0,4038.8,4039.2],[4039.2,4040.4,4039.0,4040.2],[4040.2,4041.3,4039.9,4041.1],
+           [4041.1,4041.2,4040.0,4040.3],[4040.3,4040.6,4039.2,4039.5],[4039.5,4039.8,4038.4,4038.6],[4038.6,4039.0,4037.9,4038.3]];
+  var svg = document.getElementById('chart');
+  var maxP = 4044.0, minP = 4029.0, pad = 18, H = 520, dashW = 0, barW = 26, step = 34, x0 = 30, nb = K.length;
+  var panelW = 120, axisW = 64, plotR = x0 + nb * step + 150, W = plotR + panelW + axisW;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('width', W); svg.setAttribute('height', H);
+  var y = function (p) { return pad + (maxP - p) / (maxP - minP) * (H - 2 * pad); };
+  var x = function (i) { return x0 + i * step + step / 2; };
+  el('rect', { x: 0, y: 0, width: W, height: H, fill: V('c-bg') }, svg);
+  for (var p = 4030; p <= 4044; p += 2) {
+    el('line', { x1: 0, x2: plotR + panelW, y1: y(p), y2: y(p), stroke: V('c-grid'), 'stroke-width': 0.5, 'stroke-dasharray': '2 5' }, svg);
+    el('text', { x: plotR + panelW + 8, y: y(p) + 4, fill: V('c-dim'), 'font-family': FF, 'font-size': 11 }, svg, p.toFixed(1));
+  }
+  var geo = {};
+
+  // (1) in-place daily profile: rows of $0.50 from the session start, width 35% of the day
+  var rowsP = [], tot = 0;
+  for (p = 4030.5; p <= 4041.5; p += 0.5) {
+    var v = Math.round(60 * Math.exp(-Math.pow((p - 4037.5) / 2.6, 2)) + 22 * Math.exp(-Math.pow((p - 4032.5) / 1.2, 2)) + 4);
+    rowsP.push([p, v]); tot += v;
+  }
+  var pocI = 0; rowsP.forEach(function (r, i) { if (r[1] > rowsP[pocI][1]) pocI = i; });
+  var lo = pocI, hi = pocI, acc = rowsP[pocI][1];
+  while (acc < tot * 0.7) { var up = hi + 1 < rowsP.length ? rowsP[hi + 1][1] : -1, dn = lo > 0 ? rowsP[lo - 1][1] : -1; if (up >= dn) { hi++; acc += up; } else { lo--; acc += dn; } }
+  var maxV = rowsP[pocI][1], inW = (x(nb - 1) - x(0)) * 0.35;
+  rowsP.forEach(function (r, i) {
+    var col = i === pocI ? V('o-gold') : (i >= lo && i <= hi ? V('o-varow') : V('o-profile'));
+    el('rect', { x: x(0) - barW / 2, y: y(r[0] + 0.5), width: inW * r[1] / maxV, height: Math.max(1, y(r[0]) - y(r[0] + 0.5) - 1), fill: col, 'fill-opacity': i === pocI ? 0.6 : 0.35 }, svg);
+  });
+  var dPoc = rowsP[pocI][0] + 0.25, dVah = rowsP[hi][0] + 0.5, dVal = rowsP[lo][0];
+  geo.inplace = [x(0) - barW / 2 + inW * 0.6, y(4033.5)];
+
+  // (2) weekly panel profile on the right
+  var wPoc = 4035.5;
+  for (p = 4029.5; p <= 4043.5; p += 0.5) {
+    var wv = Math.round(70 * Math.exp(-Math.pow((p - wPoc) / 3.4, 2)) + 18 * Math.exp(-Math.pow((p - 4041.0) / 1.0, 2)) + 6);
+    el('rect', { x: plotR + panelW - panelW * wv / 80, y: y(p + 0.5), width: panelW * wv / 80, height: Math.max(1, y(p) - y(p + 0.5) - 1),
+                 fill: Math.abs(p - wPoc) < 0.01 ? V('o-gold') : V('o-profile'), 'fill-opacity': Math.abs(p - wPoc) < 0.01 ? 0.7 : 0.45 }, svg);
+  }
+  geo.panel = [plotR + panelW - 50, y(4038.0)];
+
+  // levels (3–8)
+  function level(price, from, col, wdt, dash, label) {
+    var xa = from < 0 ? 0 : x(from) - barW / 2;
+    el('line', { x1: xa, x2: plotR + panelW, y1: y(price), y2: y(price), stroke: col, 'stroke-width': wdt, 'stroke-dasharray': dash ? '6 4' : 'none' }, svg);
+    if (label) el('text', { x: plotR - 6, y: y(price) - 4, 'text-anchor': 'end', fill: col, 'font-family': FF, 'font-size': 11 }, svg, label + ' ' + price.toFixed(1));
+  }
+  level(4042.6, -1, V('o-virgin'), 1, true, 'vPOC 11-06');
+  level(4041.5, 0, V('o-pd'), 1, true, 'pdVAH');
+  level(4034.0, 0, V('o-pd'), 1, true, 'pdPOC');
+  level(4029.8, 0, V('o-pd'), 1, true, 'pdVAL');
+  level(4043.4, -1, V('o-pw'), 1, true, 'pwPOC');
+  level(wPoc, -1, V('o-wpoc'), 3, false, 'wPOC');
+  level(dVah, 0, V('o-valine'), 1, false, 'VAH');
+  level(dVal, 0, V('o-valine'), 1, false, 'VAL');
+  level(dPoc, 0, V('o-gold'), 3, false, 'dPOC');
+  geo.dpoc = [x(16), y(dPoc)]; geo.va = [x(4), y(dVah)]; geo.wpoc = [x(8), y(wPoc)]; geo.pd = [x(20), y(4034.0)];
+  geo.pw = [x(13), y(4043.4)]; geo.virgin = [x(5), y(4042.6)];
+
+  // candles
+  K.forEach(function (c, i) {
+    var col = c[3] >= c[0] ? V('o-buy') : V('o-sell');
+    el('line', { x1: x(i), x2: x(i), y1: y(c[1]), y2: y(c[2]), stroke: col, 'stroke-width': 1.2 }, svg);
+    el('rect', { x: x(i) - barW / 2 + 4, y: Math.min(y(c[0]), y(c[3])), width: barW - 8, height: Math.max(1.5, Math.abs(y(c[0]) - y(c[3]))), fill: col }, svg);
+  });
+
+  // (11) stacked imbalance marks (thin bars right of the candle)
+  [[12, 4036.5, 4037.6, 1], [22, 4038.7, 4039.5, -1]].forEach(function (z) {
+    el('rect', { x: x(z[0]) + barW / 2, y: y(z[2]), width: 5, height: y(z[1]) - y(z[2]), fill: z[3] > 0 ? V('o-buy') : V('o-sell'), 'fill-opacity': 0.8 }, svg);
+  });
+  geo.stack = [x(12) + barW / 2 + 5, y(4037.0)];
+
+  // (9) large trades and (10) a cluster
+  var L = [[4, 4033.2, -1, 24, 0], [7, 4030.9, -1, 48, 1], [7, 4031.5, -1, 22, 0], [12, 4036.8, 1, 41, 1], [12, 4037.8, 1, 30, 0], [19, 4041.0, 1, 23, 0]];
+  L.forEach(function (t) {
+    var r = Math.min(14, 3 * Math.sqrt(t[3] / 20) * 1.5 + 1), col = t[2] > 0 ? V('o-buy') : V('o-sell');
+    el('circle', { cx: x(t[0]), cy: y(t[1]), r: r, fill: col, 'fill-opacity': 0.55, stroke: col, 'stroke-width': 1 }, svg);
+    if (t[4]) el('text', { x: x(t[0]) + r + 3, y: y(t[1]) + 4, fill: V('c-text'), 'font-family': FF, 'font-size': 10 }, svg, t[3]);
+  });
+  el('rect', { x: x(12) - barW, y: y(4038.3), width: 2 * barW, height: y(4036.3) - y(4038.3), fill: 'none', stroke: V('o-buy'), 'stroke-width': 1.5, 'stroke-dasharray': '5 3' }, svg);
+  geo.large = [x(7) - 8, y(4030.9)]; geo.cluster = [x(12) - barW, y(4038.3)];
+
+  // (12) absorption diamonds: confirmed (bar 7), invalidated (bar 3), pending (bar 23)
+  function diamond(i, level, dir, state) {
+    var s = 7, cx = x(i), cy = y(level) + (dir > 0 ? s + 3 : -s - 3);
+    var col = state === 'x' ? V('o-neutral') : V('o-abs');
+    el('path', { d: 'M' + cx + ',' + (cy - s) + ' L' + (cx + s) + ',' + cy + ' L' + cx + ',' + (cy + s) + ' L' + (cx - s) + ',' + cy + ' Z',
+                 fill: state === 'ok' ? V('o-abs') : 'none', 'fill-opacity': 0.85, stroke: col, 'stroke-width': 1.5 }, svg);
+    if (state === 'x') el('line', { x1: cx - s, y1: cy - s, x2: cx + s, y2: cy + s, stroke: V('o-neutral'), 'stroke-width': 1.5 }, svg);
+    return [cx, cy];
+  }
+  geo.abs = diamond(7, 4030.6, 1, 'ok');
+  diamond(3, 4033.9, 1, 'x');
+  diamond(23, 4039.0, -1, 'p');
+
+  // (14) divergence: dashed line between pivot highs, DIV at the confirmation bar
+  el('line', { x1: x(15), y1: y(4040.8), x2: x(19), y2: y(4041.3), stroke: V('o-bear'), 'stroke-width': 1.5, 'stroke-dasharray': '5 3', 'stroke-opacity': 0.85 }, svg);
+  el('text', { x: x(22), y: y(4039.8) - 22, 'text-anchor': 'middle', fill: V('o-bear'), 'font-family': FF, 'font-size': 11 }, svg, 'DIV');
+  geo.div = [x(17), y(4041.05)];
+
+  // (13) signals
+  function arrow(i, dir, reversal, label) {
+    var c = K[i], s = 11, cx = x(i), col = dir > 0 ? V('o-bull') : V('o-bear'), yy;
+    if (dir > 0) { yy = y(c[2]) + 4; el('path', { d: 'M' + cx + ',' + yy + ' L' + (cx + s * 0.7) + ',' + (yy + s) + ' L' + (cx - s * 0.7) + ',' + (yy + s) + ' Z', fill: col, 'fill-opacity': reversal ? 0.35 : 1, stroke: col, 'stroke-width': 1.5 }, svg);
+                   el('text', { x: cx, y: yy + s + 13, 'text-anchor': 'middle', fill: col, 'font-family': FF, 'font-size': 10 }, svg, label); return [cx, yy + s / 2]; }
+    yy = y(c[1]) - 4; el('path', { d: 'M' + cx + ',' + yy + ' L' + (cx + s * 0.7) + ',' + (yy - s) + ' L' + (cx - s * 0.7) + ',' + (yy - s) + ' Z', fill: col, 'fill-opacity': reversal ? 0.35 : 1, stroke: col, 'stroke-width': 1.5 }, svg);
+    el('text', { x: cx, y: yy - s - 4, 'text-anchor': 'middle', fill: col, 'font-family': FF, 'font-size': 10 }, svg, label); return [cx, yy - s / 2];
+  }
+  geo.sig = arrow(8, 1, true, 'R68');
+  arrow(12, 1, false, 'P74');
+  arrow(22, -1, false, 'P63*');
+
+  // (15) dashboard box
+  el('rect', { x: 8, y: 8, width: 190, height: 58, fill: V('o-dash'), stroke: V('o-neutral'), 'stroke-opacity': 0.6 }, svg);
+  ['DrTrader GC 12-26 | Tick Replay', 'Vol 203,765  Buy 102,267', 'Signal ... state None'].forEach(function (t, i) {
+    el('text', { x: 14, y: 24 + i * 16, fill: V('o-dtext'), 'font-family': FF, 'font-size': 10 }, svg, t);
+  });
+  geo.dash = [198, 30];
+
+  // callouts
+  [[1, geo.inplace, 10, 46], [2, geo.panel, -10, -40], [3, geo.dpoc, 0, -30], [4, geo.va, -6, -22], [5, geo.wpoc, 10, 28], [6, geo.pd, 6, 30],
+   [7, geo.pw, -6, 26], [8, geo.virgin, 8, 24], [9, geo.large, -24, 26], [10, geo.cluster, -30, -16], [11, geo.stack, 26, 16],
+   [12, geo.abs, 26, 22], [13, geo.sig, 24, 34], [14, geo.div, -6, -30], [15, geo.dash, 30, 8]].forEach(function (c) {
+    var t = c[1], bx = t[0] + c[2], by = t[1] + c[3];
+    el('line', { x1: t[0], y1: t[1], x2: bx, y2: by, stroke: V('c-poc'), 'stroke-width': 1.1 }, svg);
+    el('circle', { cx: t[0], cy: t[1], r: 2.4, fill: V('c-poc') }, svg);
+    el('circle', { cx: bx, cy: by, r: 11, fill: V('c-poc') }, svg);
+    el('text', { x: bx, y: by + 4.2, 'text-anchor': 'middle', fill: '#1a1405', 'font-family': FF, 'font-size': 12, 'font-weight': 700 }, svg, c[0]);
+  });
+
+  // ---------------- legend
+  function line(col, w, dash) { return '<span style="position:absolute;left:2px;right:2px;top:9px;height:0;border-top:' + w + 'px ' + (dash ? 'dashed' : 'solid') + ' ' + col + '"></span>'; }
+  var items = [
+    [1, 'پرۆفایلی ڕۆژانە لەسەر مۆمەکان', '<span style="position:absolute;inset:3px 6px 3px 2px;background:linear-gradient(90deg,var(--o-varow) 60%,transparent 60%)"></span>',
+     'بۆ هەر ڕۆژێک، قەبارەی مامەڵەکراو لە هەر نرخێکدا. بەشی شین = Value Area (٧٠٪ ی قەبارە)، ڕیزی زەرد = POC. ٥ ڕۆژی پێشووش نیشان دەدرێن.',
+     'بزانە بازاڕ لە کوێدا «قبوڵ»ی کردووە (قەبارەی زۆر) و لە کوێدا «ڕەتی» کردۆتەوە (قەبارەی کەم).'],
+    [2, 'پرۆفایلی لای ڕاست', '<span style="position:absolute;inset:3px 2px 3px 10px;background:var(--o-profile)"></span>',
+     'بە بنەڕەت پرۆفایلی هەفتانەیە. دەتوانیت بیگۆڕیت بۆ ڕۆژ، دانیشتن، بەشی بینراوی چارت (Visible Range) یان ماوەیەکی دیاریکراو (Fixed Range).',
+     'وێنەی گەورەتری قەبارە: ئاستە گرنگەکانی هەفتە لە یەک نیگادا.'],
+    [3, 'هێڵی زەردی ئەستوور: dPOC', line('var(--o-gold)', 3), 'POC ی ڕۆژی ئێستا: ئەو نرخەی زۆرترین قەبارەی ئەمڕۆی تێدا مامەڵە کراوە. لە ماوەی ڕۆژدا دەجووڵێت.',
+     'نرخ زۆرجار بۆ لای POC دەکێشرێت. داخستن لە سەرووی یان خوارووی POC ئاراستەی کۆنترۆڵ نیشان دەدات.'],
+    [4, 'هێڵی شینی ڕووناک: VAH و VAL', line('var(--o-valine)', 1), 'سەرەوە و خوارەوەی Value Area ی ئەمڕۆ.',
+     'نرخ لە ناو VA دا = هاوسەنگی. دەرچوون و مانەوە لە دەرەوەی VA = ئەگەری ڕەوت.'],
+    [5, 'هێڵی شینی ئەستوور: wPOC', line('var(--o-wpoc)', 3), 'POC ی هەفتەی ئێستا.', 'ئاستێکی بەهێزتر لە dPOC، چونکە قەبارەی چەند ڕۆژ کۆدەکاتەوە.'],
+    [6, 'هێڵی پرتەقاڵیی پچڕپچڕ: ڕۆژی پێشوو', line('var(--o-pd)', 1, true), 'pdPOC و pdVAH و pdVAL: ئاستەکانی پرۆفایلی دوێنێ.',
+     'سەرەتای ڕۆژ: ئایا نرخ لە ناو Value Area ی دوێنێدا دەکرێتەوە یان لە دەرەوەی؟ ئەمە یەکێکە لە گرنگترین پرسیارەکانی ڕۆژ.'],
+    [7, 'هێڵی مۆری پچڕپچڕ: pwPOC', line('var(--o-pw)', 1, true), 'POC ی هەفتەی پێشوو.', 'ئاستێکی گرنگ بۆ پشتگیری یان بەرگری لە ماوەی هەفتەدا.'],
+    [8, 'هێڵی سووری مۆری پچڕپچڕ: vPOC', line('var(--o-virgin)', 1, true),
+     'POC ی دەستلێنەدراو: POC ی ڕۆژێک یان هەفتەیەکی تەواوبوو کە لەو کاتەوە هیچ مامەڵەیەک لەو نرخەدا نەکراوە. ڕێکەوتەکەی لە تەنیشتیەوە نووسراوە (بۆ نموونە 11-06).',
+     'بازاڕ زۆرجار دەگەڕێتەوە بۆ ئەم ئاستانە. دوای یەکەم مامەڵە لەو نرخەدا، هێڵەکە نامێنێت.'],
+    [9, 'بازنەی سەوز و سوور: مامەڵەی گەورە', '<span style="position:absolute;left:9px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--o-sell);opacity:.75"></span>',
+     'جێبەجێکردنی گەورەی کڕین (سەوز) یان فرۆشتن (سوور). بازنەی گەورەتر = قەبارەی زیاتر. سنوورەکە بە خۆکاری لە قەبارەی ڕابردووی هەمان کاتی ڕۆژ دیاری دەکرێت. لێواری خۆڵەمێشی = لایەنی مامەڵەکە خەمڵێنراوە.',
+     'چالاکیی گەورە لەو نرخەدا. گرنگ: ئەگەر نرخ دوای ئەوە بەردەوام نەبوو، لەوانەیە هەڵمژین بێت.'],
+    [10, 'چوارگۆشەی پچڕپچڕ: Cluster', '<span style="position:absolute;inset:3px 5px;border:1.5px dashed var(--o-buy)"></span>',
+     'چەند مامەڵەی گەورەی هاوئاراستە لە ماوەیەکی کورتدا (بنەڕەت ٣ چرکە) و لە نزیک یەکەوە.', 'پاڵەپەستۆی بەردەوامی یەک لایەن. ئەمە ناسەلمێنێت کە یەک فەرمانی گەورە بووە.'],
+    [11, 'هێڵی ستوونیی باریک: Stacked Imbalance', '<span style="position:absolute;left:14px;top:2px;bottom:2px;width:5px;background:var(--o-buy)"></span>',
+     'لە لای ڕاستی مۆمەکە: لانیکەم ٣ Imbalance ی هاوئاراستە لە سەر یەک لەو مۆمەدا. بۆ وردەکاری، DrTraderFootprint ببینە.', 'هەمان واتای ڕێبەری فووتپرینت: ناوچەی پشتگیری (سەوز) یان بەرگری (سوور).'],
+    [12, 'ئەڵماسی زەرد: هەڵمژین', '<span style="position:absolute;left:10px;top:3px;width:12px;height:12px;background:var(--o-abs);transform:rotate(45deg)"></span>',
+     'ئەڵماسی بەتاڵ = کاندید، پڕ = پشتڕاستکراوە، خۆڵەمێشی بە خەتەوە = هەڵوەشاوە. لە خوارەوەی ئاستەکە = هەڵمژینی فرۆشتن (ئەگەری بەرزبوونەوە)، لە سەرەوە = هەڵمژینی کڕین.', 'بڕوانە بەشی «دۆخەکانی هەڵمژین».'],
+    [13, 'سێگۆشە: ئاماژە', '<span style="position:absolute;left:9px;top:3px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:13px solid var(--o-bull)"></span>',
+     'سەوز بەرەو سەرەوە = ئاماژەی کڕین، سوور بەرەو خوارەوە = فرۆشتن. پڕ و P = پاڵەپەستۆ (Pressure)، نیوە ڕوون و R = گەڕانەوە (Reversal). ژمارە = نمرە، * = نیشانەی تایبەت.', 'بڕوانە بەشی «ئاماژەکان».'],
+    [14, 'DIV: جیاوازیی CVD', line('var(--o-bear)', 1.5, true),
+     'نرخ لوتکەیەکی بەرزتر دروست دەکات بەڵام CVD نا (یان بە پێچەوانەوە لە بنەکاندا). خەتە پچڕپچڕەکە دوو لوتکەکە پێکەوە دەبەستێتەوە.', 'نیشانەیەکی ئەگەرییە کە هێزی ڕەوتەکە کەم بۆتەوە. بە تەنها بەڵگەی گەڕانەوە نییە.'],
+    [15, 'داشبۆرد', '<span style="position:absolute;inset:2px;background:var(--o-dash);border:1px solid var(--o-neutral)"></span>', 'کورتەی هەموو شتێک لە گۆشەی چارتەکە.', 'بڕوانە بەشی «داشبۆرد».']
+  ];
+  var box = document.getElementById('legend');
+  items.forEach(function (it) {
+    var d = document.createElement('article'); d.className = 'item';
+    d.innerHTML = '<header><span class="badge">' + it[0] + '</span><span class="swatch">' + it[2] + '</span><h3>' + it[1] + '</h3></header><p class="what">' + it[3] + '</p><p class="use"><b>بەکارهێنان:</b> ' + it[4] + '</p>';
+    box.appendChild(d);
+  });
+
+  // ---------------- absorption states
+  function miniDiamond(state) {
+    var s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 60 40'); s.setAttribute('width', 60); s.setAttribute('height', 40);
+    var col = state === 'x' || state === 'e' ? V('o-neutral') : V('o-abs');
+    el('path', { d: 'M30,6 L44,20 L30,34 L16,20 Z', fill: state === 'ok' ? V('o-abs') : 'none', stroke: col, 'stroke-width': 2 }, s);
+    if (state === 'x') el('line', { x1: 16, y1: 6, x2: 44, y2: 34, stroke: V('o-neutral'), 'stroke-width': 2 }, s);
+    return s.outerHTML;
+  }
+  var abs = [['p', 'Pending', 'کاندید', 'مۆمەکە داخراوە و مەرجەکانی هەڵمژینی تێدایە. چاوەڕێی پشتڕاستکردنەوەیە (بنەڕەت ٣ مۆم).'],
+             ['ok', 'Confirmed', 'پشتڕاستکراوە', 'نرخ لە سەرووی بەرزترینی مۆمی کاندید داخراوە (بۆ بەرزبوونەوە). ئێستا دەتوانێت بەشێک بێت لە ئاماژەی گەڕانەوە.'],
+             ['x', 'Invalidated', 'هەڵوەشاوە', 'نرخ زیاتر لە ٢ تیک لە ئاستە پارێزراوەکە تێپەڕیوە. واتە هەڵمژینەکە سەرکەوتوو نەبوو.'],
+             ['e', 'Expired', 'بەسەرچوو', 'لە ماوەی دیاریکراودا نە پشتڕاست کرایەوە نە هەڵوەشایەوە.']];
+  var ab = document.getElementById('absKinds');
+  abs.forEach(function (a) {
+    var d = document.createElement('article'); d.className = 'kind';
+    d.innerHTML = '<div class="mini">' + miniDiamond(a[0]) + '</div><div class="nm">' + a[1] + '</div><h3>' + a[2] + '</h3><p>' + a[3] + '</p>';
+    ab.appendChild(d);
+  });
+
+  // ---------------- signal kinds
+  function miniArrow(dir, rev, label) {
+    var s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 70 46'); s.setAttribute('width', 70); s.setAttribute('height', 46);
+    var col = dir > 0 ? V('o-bull') : V('o-bear');
+    if (dir === 0) { el('text', { x: 35, y: 32, 'text-anchor': 'middle', fill: V('o-neutral'), 'font-family': FF, 'font-size': 26, 'font-weight': 700 }, s, '?'); return s.outerHTML; }
+    var d = dir > 0 ? 'M35,6 L47,26 L23,26 Z' : 'M35,26 L47,6 L23,6 Z';
+    el('path', { d: d, fill: col, 'fill-opacity': rev ? 0.35 : 1, stroke: col, 'stroke-width': 2 }, s);
+    el('text', { x: 35, y: dir > 0 ? 42 : 42, 'text-anchor': 'middle', fill: col, 'font-family': FF, 'font-size': 12 }, s, label);
+    return s.outerHTML;
+  }
+  var sigs = [[1, false, 'P74', 'Strong Bullish Pressure', 'پاڵەپەستۆی بەهێزی کڕین', 'Delta ی پۆزەتیڤ و بەهێز، پاڵپشتیی CVD و مامەڵە گەورەکان، و داخستن لە سەرووی بەرزترینی مۆمی پێشوو.'],
+              [-1, false, 'P63', 'Strong Bearish Pressure', 'پاڵەپەستۆی بەهێزی فرۆشتن', 'پێچەوانەی سەرەوە: فرۆشتنی هێرشبەر زاڵە و نرخ لە خوارووی نزمترینی مۆمی پێشوو داخراوە.'],
+              [1, true, 'R68', 'Potential Bullish Reversal', 'ئەگەری گەڕانەوەی بەرزبوونەوە', 'هەڵمژینی فرۆشتنی پشتڕاستکراوە یان جیاوازیی CVD لە نزیک ئاستێکی گرنگ، و مۆمی بەرزبوو.'],
+              [-1, true, 'R61', 'Potential Bearish Reversal', 'ئەگەری گەڕانەوەی دابەزین', 'هەڵمژینی کڕینی پشتڕاستکراوە یان جیاوازیی CVD لە نزیک بەرگرییەک، و مۆمی دابەزیو.'],
+              [0, false, '', 'Conflict', 'ناکۆکی', 'هەردوو لایەن نمرەی بەرزیان هەیە. ئاماژەی ئاراستەدار دروست نابێت. بە بنەڕەت نیشان نادرێت (Show conflicts).']];
+  var sk = document.getElementById('sigKinds');
+  sigs.forEach(function (sg) {
+    var d = document.createElement('article'); d.className = 'kind';
+    d.innerHTML = '<div class="mini">' + miniArrow(sg[0], sg[1], sg[2]) + '</div><div class="nm">' + sg[3] + '</div><h3>' + sg[4] + '</h3><p>' + sg[5] + '</p>';
+    sk.appendChild(d);
+  });
+
+  // ---------------- dashboard mock + explanation
+  var dl = [
+    ['DrTrader GC 12-26  |  Tick Replay: exact bid/ask history', 'ناوی گرێبەست و سەرچاوەی داتا. «Tick Replay» = داتای ورد. «1-tick series ... ESTIMATED» = لایەنی مامەڵەکان خەمڵێنراوە.'],
+    ['Day 2026-11-04  window NewYork  RVOL 1.24', 'ڕۆژی بازرگانی (بە پێی بۆرس)، دانیشتنی ئێستا و قەبارەی ڕێژەیی: 1.24 واتە قەبارەی ئەمڕۆ تا ئێستا ١.٢٤ هێندەی ناوەندی ڕۆژانی پێشووە لە هەمان کاتدا.'],
+    ['Vol 203,765  Buy 102,267  Sell 101,498', 'کۆی قەبارەی دانیشتن و دابەشبوونی بۆ کڕین و فرۆشتنی هێرشبەر.'],
+    ['Delta 769 (0.4%)  dayCVD 769  wkCVD 8,046  balanced', 'Delta ی دانیشتن و ڕێژەکەی، CVD ی ڕۆژ و هەفتە. لە کۆتاییدا: BUY pressure (Delta% > 10)، SELL pressure (< −10) یان balanced.'],
+    ['dPOC 4056.1  VA 3981.9-4075.5  [ETH]', 'POC و Value Area ی ئەمڕۆ، و ئایا پرۆفایل هەموو کاتەکان (ETH) یان تەنها کاتی فەرمی (RTH) دەگرێتەوە.'],
+    ['Large thr 20 (Adaptive)  run BUY x2', 'سنووری ئێستای مامەڵەی گەورە و جۆری دیاریکردنی (Adaptive = خۆکار، ManualWarmup = هێشتا نموونەی کافی نییە). run = ژمارەی مامەڵە گەورەی هاوئاراستەی یەک لە دوای یەک.'],
+    ['Signal StrongBearishPressure 64 (27 bars ago)  state None  bull 0 / bear 0', 'دوایین ئاماژە و چەند مۆم لەمەوبەر، دۆخی ئێستا، و نمرەی کڕین/فرۆشتنی دوایین مۆمی داخراو.'],
+    ['Data Exact | exact 100.0% est 0.0%  last print 0s ago', 'جۆری داتا: Exact / MostlyExact = باش. Estimated = Tick Replay چالاک نییە. gaps = بڕانی داتا. last print = چەند چرکە لە دوایین مامەڵەوە.'],
+    ['Perf 1.0 us/print, 0.16 ms/bar close, prints 637,524', 'خێرایی پرۆسێسکردن. ژمارەی بچووک = باش.'],
+    ['ALERT Signal: PotentialBullishReversal score 68', 'دوایین ئاگادارکردنەوە (بۆ ماوەی ٣٠ چرکە نیشان دەدرێت). بە زەرد.', 'alert'],
+    ['! Calculate must be OnEachTick ...', 'ئاگاداریی ڕێکخستن بە سوور. ئەگەر بینیت، ڕێکخستنەکە چاک بکە.', 'warn']
+  ];
+  var mock = document.getElementById('dashMock'), rowsEl = document.getElementById('dashRows');
+  dl.forEach(function (r, i) {
+    var dv = document.createElement('div');
+    dv.innerHTML = '<span class="n">' + (i + 1) + '</span><span' + (r[2] ? ' class="' + r[2] + '"' : '') + '></span>';
+    dv.lastChild.textContent = r[0];
+    mock.appendChild(dv);
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="k">' + (i + 1) + '</td><td class="k"></td><td></td>';
+    tr.children[1].textContent = r[0].split(' ')[0];
+    tr.children[2].textContent = r[1];
+    rowsEl.appendChild(tr);
+  });
+})();
+</script>
+
+</body>
+</html>
