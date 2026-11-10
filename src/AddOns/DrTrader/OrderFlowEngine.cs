@@ -432,6 +432,14 @@ namespace NinjaTrader.NinjaScript.AddOns.DrTrader
                 ProfileStats s = pw.GetStats(Settings.WeekProfile);
                 if (s.IsValid) c.ReferenceLevels.Add(s.PocPrice(ts));
             }
+            GofVolumeProfile on = Profiles.CurrentOvernight;
+            if (on != null && on.Ladder.HasData)
+            {
+                ProfileStats s = on.GetStats(Settings.DayProfile);
+                if (s.IsValid) c.ReferenceLevels.Add(s.PocPrice(ts));
+                c.ReferenceLevels.Add(PriceMath.ToPrice(on.Ladder.MaxTick, ts));
+                c.ReferenceLevels.Add(PriceMath.ToPrice(on.Ladder.MinTick, ts));
+            }
             for (int i = 0; i < Profiles.VirginLevels.Count; i++)
                 if (Profiles.VirginLevels[i].IsVirgin) c.ReferenceLevels.Add(Profiles.VirginLevels[i].Price);
         }

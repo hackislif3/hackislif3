@@ -399,6 +399,19 @@ namespace NinjaTrader.NinjaScript.AddOns.DrTrader
         public int VirginToleranceTicks = 0;
         public int MaxVirginLevels = 20;
         public bool TrackSubSessions = true;
+
+        /// <summary>
+        /// RTH split of each trading day, always from ALL prints (independent of Scope):
+        ///   Overnight = session open until the first print inside the RTH window,
+        ///   RTH       = prints inside the RTH window,
+        ///   PostRth   = prints after the RTH window until the session ends.
+        /// </summary>
+        public bool TrackRthSplit = true;
+        public GofVolumeProfile CurrentOvernight;
+        public GofVolumeProfile CurrentRth;
+        public GofVolumeProfile CurrentPostRth;
+        public readonly List<GofVolumeProfile> CompletedSegments = new List<GofVolumeProfile>();
+        private int segmentPhase;   // 0 overnight, 1 RTH, 2 post-RTH
         public DateTime ContractStartFilter = DateTime.MinValue; // levels from before this trading day are dropped (rollover)
 
         public GofVolumeProfile CurrentSession;
@@ -429,6 +442,13 @@ namespace NinjaTrader.NinjaScript.AddOns.DrTrader
 
         public void OnSessionStart(DateTime tradingDay, int bar, bool newDay, bool newWeek)
         {
+            if (newDay || CurrentDay == null)
+            {
+                CompleteSegment(ref CurrentOvernight);
+                CompleteSegment(ref CurrentRth);
+                CompleteSegment(ref CurrentPostRth);
+                segmentPhase = 0;
+            }
             if (CurrentSession != null)
             {
                 CurrentSession.IsComplete = true;
@@ -507,6 +527,16 @@ namespace NinjaTrader.NinjaScript.AddOns.DrTrader
                 FixedRange.Add(ref t, bar);
             }
 
+            if (TrackRthSplit)
+            {
+                int phase = inRth ? 1 : (segmentPhase >= 1 ? 2 : 0);
+                if (phase > segmentPhase) segmentPhase = phase;
+                DateTime day = CurrentDay != null ? CurrentDay.TradingDay : t.Time.Date;
+                if (phase == 0) SegmentFor(ref CurrentOvernight, ProfileKind.Overnight, "ON", day, bar).Add(ref t, bar);
+                else if (phase == 1) SegmentFor(ref CurrentRth, ProfileKind.Rth, "RTH", day, bar).Add(ref t, bar);
+                else SegmentFor(ref CurrentPostRth, ProfileKind.PostRth, "POST", day, bar).Add(ref t, bar);
+            }
+
             bool include = Scope == ProfileScope.ETH || inRth;
             if (include)
             {
@@ -543,6 +573,20 @@ namespace NinjaTrader.NinjaScript.AddOns.DrTrader
             if (CurrentSession != null) CurrentSession.TouchBar(bar);
             if (CurrentDay != null) CurrentDay.TouchBar(bar);
             if (CurrentWeek != null) CurrentWeek.TouchBar(bar);
+        }
+
+        private static GofVolumeProfile SegmentFor(ref GofVolumeProfile p, ProfileKind kind, string label, DateTime day, int bar)
+        {
+            if (p == null) p = new GofVolumeProfile(kind, label, day, bar, 256);
+            return p;
+        }
+
+        private void CompleteSegment(ref GofVolumeProfile p)
+        {
+            if (p == null) return;
+            p.IsComplete = true;
+            AddLimited(CompletedSegments, p, Math.Max(3, MaxHistoryDays * 3));
+            p = null;
         }
 
         public GofVolumeProfile GetSubSession(string name)

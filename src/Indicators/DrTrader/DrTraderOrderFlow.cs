@@ -548,7 +548,11 @@ namespace NinjaTrader.NinjaScript.Indicators
                     EnsureResources();
                     RenderTarget.AntialiasMode = SharpDX.Direct2D1.AntialiasMode.PerPrimitive;
                     int from = Math.Max(0, ChartBars.FromIndex), to = ChartBars.ToIndex;
-                    if (EnableProfiles && ShowSessionProfiles) RenderInPlaceProfiles(chartControl, chartScale, from, to);
+                    if (EnableProfiles && ShowSessionProfiles)
+                    {
+                        if (SplitRthOvernight) RenderSegmentProfiles(chartControl, chartScale, from, to);
+                        else RenderInPlaceProfiles(chartControl, chartScale, from, to);
+                    }
                     if (EnableProfiles && PanelSource != GofPanelProfileSource.None) RenderPanelProfile(chartControl, chartScale, from, to);
                     if (EnableProfiles) RenderLevels(chartControl, chartScale, from, to);
                     if (ShowImbalanceZones) RenderZones(chartControl, chartScale, from, to);
@@ -575,6 +579,11 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         private void DrawProfileRows(ProfileStats st, ChartScale cs, float xBase, float maxWidth, bool growLeft, double opacity)
         {
+            DrawProfileRows(st, cs, xBase, maxWidth, growLeft, opacity, ProfileBrush, ValueAreaBrush);
+        }
+
+        private void DrawProfileRows(ProfileStats st, ChartScale cs, float xBase, float maxWidth, bool growLeft, double opacity, Brush baseBrush, Brush vaBrush)
+        {
             if (st == null || !st.IsValid || st.MaxRowVolume <= 0 || maxWidth < 2) return;
             double ts = TickSize;
             double top = cs.MaxValue, bottom = cs.MinValue;
@@ -595,12 +604,12 @@ namespace NinjaTrader.NinjaScript.Indicators
                     float x0 = growLeft ? xBase - w : xBase;
                     RenderTarget.FillRectangle(new SharpDX.RectangleF(x0, y1, ws, h), Dx(SellBrush, opacity * (inVa ? 1.0 : 0.6)));
                     RenderTarget.FillRectangle(new SharpDX.RectangleF(x0 + ws, y1, wb, h), Dx(BuyBrush, opacity * (inVa ? 1.0 : 0.6)));
-                    RenderTarget.FillRectangle(new SharpDX.RectangleF(x0 + ws + wb, y1, Math.Max(0, w - ws - wb), h), Dx(ProfileBrush, opacity * 0.6));
+                    RenderTarget.FillRectangle(new SharpDX.RectangleF(x0 + ws + wb, y1, Math.Max(0, w - ws - wb), h), Dx(baseBrush, opacity * 0.6));
                     if (r == st.PocRow) RenderTarget.DrawRectangle(new SharpDX.RectangleF(x0, y1, w, h), Dx(PocBrush, 100), 1f);
                 }
                 else
                 {
-                    Brush b = r == st.PocRow ? PocBrush : (inVa ? ValueAreaBrush : ProfileBrush);
+                    Brush b = r == st.PocRow ? PocBrush : (inVa ? vaBrush : baseBrush);
                     float x0 = growLeft ? xBase - w : xBase;
                     RenderTarget.FillRectangle(new SharpDX.RectangleF(x0, y1, w, h), Dx(b, r == st.PocRow ? Math.Min(100, opacity * 1.6) : opacity));
                 }
@@ -622,6 +631,43 @@ namespace NinjaTrader.NinjaScript.Indicators
                 float x1 = X(cc, p.EndBar) + bw / 2f;
                 float width = (float)((x1 - x0) * InPlaceWidthPercent / 100.0);
                 DrawProfileRows(p.GetStats(engine.Settings.DayProfile), cs, x0, width, false, ProfileOpacity);
+            }
+        }
+
+        /// <summary>Each trading day drawn as Overnight / RTH / Post-RTH profiles, each anchored at its own first bar.</summary>
+        private void RenderSegmentProfiles(ChartControl cc, ChartScale cs, int from, int to)
+        {
+            VolumeProfileEngine pe = engine.Profiles;
+            List<GofVolumeProfile> list = new List<GofVolumeProfile>();
+            List<GofVolumeProfile> done = pe.CompletedSegments;
+            for (int i = Math.Max(0, done.Count - ProfilesToShow * 3); i < done.Count; i++) list.Add(done[i]);
+            if (pe.CurrentOvernight != null) list.Add(pe.CurrentOvernight);
+            if (pe.CurrentRth != null) list.Add(pe.CurrentRth);
+            if (pe.CurrentPostRth != null) list.Add(pe.CurrentPostRth);
+            float bw = Math.Max(1, cc.GetBarPaintWidth(ChartBars));
+            double ts = TickSize;
+            for (int i = 0; i < list.Count; i++)
+            {
+                GofVolumeProfile p = list[i];
+                if (p.Kind == ProfileKind.PostRth && !ShowPostRthProfile) continue;
+                if (p.StartBar < 0 || p.EndBar < from || p.StartBar > to || !p.Ladder.HasData) continue;
+                float x0 = X(cc, p.StartBar) - bw / 2f;
+                float x1 = X(cc, p.EndBar) + bw / 2f;
+                float width = (float)(Math.Max(bw, x1 - x0) * InPlaceWidthPercent / 100.0);
+                ProfileStats st = p.GetStats(engine.Settings.DayProfile);
+                bool on = p.Kind == ProfileKind.Overnight;
+                double op = p.Kind == ProfileKind.PostRth ? ProfileOpacity * 0.6 : ProfileOpacity;
+                DrawProfileRows(st, cs, x0, width, false, op, on ? OvernightBrush : ProfileBrush, on ? OvernightBrush : ValueAreaBrush);
+                if (ShowLevelLabels && st.IsValid)
+                {
+                    double topPrice = PriceMath.ToPrice(p.Ladder.MaxTick, ts) + ts;
+                    if (topPrice <= cs.MaxValue && topPrice >= cs.MinValue)
+                    {
+                        string t = p.Label + " POC " + Instrument.MasterInstrument.FormatPrice(st.PocPrice(ts));
+                        using (SharpDX.DirectWrite.TextLayout tl = new SharpDX.DirectWrite.TextLayout(NinjaTrader.Core.Globals.DirectWriteFactory, t, smallFormat, 300, 20))
+                            RenderTarget.DrawTextLayout(new SharpDX.Vector2(x0, Y(cs, topPrice) - tl.Metrics.Height - 1), tl, Dx(on ? OvernightBrush : TextBrush, 85));
+                    }
+                }
             }
         }
 
@@ -736,6 +782,15 @@ namespace NinjaTrader.NinjaScript.Indicators
                     for (int i = 0; i < day.LvnRows.Length; i++) DrawLevel(cc, cs, day.RowCenterPrice(day.LvnRows[i], ts), dayStart, -1, LvnBrush, 1f, true, "LVN");
                 }
                 if (ShowDailyPoc) DrawLevel(cc, cs, day.PocPrice(ts), dayStart, -1, DailyPocBrush, lw + 1, false, "dPOC");
+            }
+            if (ShowOvernightLevels && pe.CurrentOvernight != null && pe.CurrentOvernight.Ladder.HasData)
+            {
+                GofVolumeProfile on = pe.CurrentOvernight;
+                int start = pe.CurrentRth != null ? pe.CurrentRth.StartBar : on.StartBar;
+                ProfileStats ost = on.GetStats(engine.Settings.DayProfile);
+                DrawLevel(cc, cs, PriceMath.ToPrice(on.Ladder.MaxTick, ts), start, -1, OvernightBrush, 1f, true, "ONH");
+                DrawLevel(cc, cs, PriceMath.ToPrice(on.Ladder.MinTick, ts), start, -1, OvernightBrush, 1f, true, "ONL");
+                if (ost.IsValid) DrawLevel(cc, cs, ost.PocPrice(ts), start, -1, OvernightBrush, lw, false, "onPOC");
             }
             if (ShowDevelopingPocPath)
             {
@@ -1013,6 +1068,9 @@ namespace NinjaTrader.NinjaScript.Indicators
             HvnFraction = 0.5;
             LvnFraction = 0.3;
             ShowSessionProfiles = true;
+            SplitRthOvernight = true;
+            ShowPostRthProfile = true;
+            ShowOvernightLevels = true;
             ProfilesToShow = 5;
             InPlaceWidthPercent = 35;
             PanelSource = GofPanelProfileSource.Week;
@@ -1147,6 +1205,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             WeeklyPocBrush = Brushes.DeepSkyBlue;
             PrevDayBrush = Brushes.Orange;
             PrevWeekBrush = Brushes.MediumPurple;
+            OvernightBrush = Brushes.Orchid;
             VirginPocBrush = Brushes.Magenta;
             ValueAreaLineBrush = Brushes.LightSteelBlue;
             HvnBrush = Brushes.Teal;
@@ -1242,7 +1301,14 @@ namespace NinjaTrader.NinjaScript.Indicators
         [Display(Name = "Fixed range end", Order = 22, GroupName = "02. Volume Profile")]
         public DateTime FixedRangeEnd { get; set; }
 
+        [Display(Name = "Split RTH / Overnight", Description = "Draw each day as Overnight (session open to RTH open), RTH and Post-RTH profiles instead of one daily profile.", Order = 23, GroupName = "02. Volume Profile")]
+        public bool SplitRthOvernight { get; set; }
+        [Display(Name = "Show Post-RTH profile", Description = "Profile of the prints after the RTH window until the session ends.", Order = 24, GroupName = "02. Volume Profile")]
+        public bool ShowPostRthProfile { get; set; }
+
         // ---------------- 03. Levels
+        [Display(Name = "Overnight high / low / POC", Description = "ONH, ONL and onPOC of the current day, extended from the RTH open.", Order = 14, GroupName = "03. Levels")]
+        public bool ShowOvernightLevels { get; set; }
         [Display(Name = "Daily POC", Order = 1, GroupName = "03. Levels")]
         public bool ShowDailyPoc { get; set; }
         [Display(Name = "Weekly POC", Order = 2, GroupName = "03. Levels")]
@@ -1425,6 +1491,8 @@ namespace NinjaTrader.NinjaScript.Indicators
         [XmlIgnore] [Display(Name = "Previous day levels", Order = 17, GroupName = "13. Visual")] public Brush PrevDayBrush { get; set; }
         [Browsable(false)] public string PrevDayBrushSerializable { get { return Serialize.BrushToString(PrevDayBrush); } set { PrevDayBrush = Serialize.StringToBrush(value); } }
         [XmlIgnore] [Display(Name = "Previous week POC", Order = 18, GroupName = "13. Visual")] public Brush PrevWeekBrush { get; set; }
+        [XmlIgnore] [Display(Name = "Overnight profile / levels", Order = 29, GroupName = "13. Visual")] public Brush OvernightBrush { get; set; }
+        [Browsable(false)] public string OvernightBrushSerializable { get { return Serialize.BrushToString(OvernightBrush); } set { OvernightBrush = Serialize.StringToBrush(value); } }
         [Browsable(false)] public string PrevWeekBrushSerializable { get { return Serialize.BrushToString(PrevWeekBrush); } set { PrevWeekBrush = Serialize.StringToBrush(value); } }
         [XmlIgnore] [Display(Name = "Virgin POC", Order = 19, GroupName = "13. Visual")] public Brush VirginPocBrush { get; set; }
         [Browsable(false)] public string VirginPocBrushSerializable { get { return Serialize.BrushToString(VirginPocBrush); } set { VirginPocBrush = Serialize.StringToBrush(value); } }

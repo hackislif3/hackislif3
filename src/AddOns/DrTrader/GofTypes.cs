@@ -31,7 +31,7 @@ namespace NinjaTrader.NinjaScript.AddOns.DrTrader
 
     public enum ProfileScope { ETH = 0, RTH = 1 }
 
-    public enum ProfileKind { Session = 0, Day = 1, Week = 2, SubSession = 3, Range = 4, Fixed = 5 }
+    public enum ProfileKind { Session = 0, Day = 1, Week = 2, SubSession = 3, Range = 4, Fixed = 5, Overnight = 6, Rth = 7, PostRth = 8 }
 
     public enum SignalKind
     {

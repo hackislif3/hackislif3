@@ -29,5 +29,8 @@ namespace NinjaTrader.NinjaScript.AddOns.DrTrader
     /// <summary>Built-in colour themes of the DrTrader footprint (Custom = use the colour properties).</summary>
     public enum GofTheme { Dark = 0, Light = 1, Midnight = 2, Custom = 3 }
 
+    /// <summary>Colour ramps of the DrTrader heatmap (cold -> hot).</summary>
+    public enum GofHeatPalette { Thermal = 0, Ocean = 1, Mono = 2 }
+
     public enum GofCvdPanelMode { CvdCandles = 0, CvdLine = 1, BarDelta = 2, DeltaPercent = 3 }
 }

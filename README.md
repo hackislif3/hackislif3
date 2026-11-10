@@ -20,9 +20,10 @@
 ## اندیکاتورها
 | اندیکاتور | کار |
 |---|---|
-| **DrTraderOrderFlow** | پروفایل‌ها، POC/VA، معاملات بزرگ، Absorption، واگرایی، سیگنال، داشبورد، هشدار |
+| **DrTraderOrderFlow** | پروفایل‌ها (روزانه یا جدا: Overnight / RTH / Post-RTH، با ONH/ONL/onPOC)، POC/VA، معاملات بزرگ، Absorption، واگرایی، سیگنال، داشبورد، هشدار |
 | **DrTraderFootprint** | فوت‌پرینت مستقل: Bid x Ask / تعداد معاملات / Delta / Volume، چهار حالت رنگ‌آمیزی، تم‌های Dark/Light/Midnight/Custom، Imbalance و Stacked zone تا شکسته‌شدن، POC و VA هر کندل، Unfinished auction، حباب اجراهای تجمیعی (Tape)، جدول آمار کندل‌ها |
 | **DrTraderCumulativeDelta** | پنل CVD کندلی/خطی، Bar Delta، Delta%، واگرایی |
+| **DrTraderHeatmap** | نقشه حرارتی دفتر سفارشات (Level 2): سفارش‌های Limit منتظر در هر قیمت در طول زمان، دفتر فعلی سمت راست، مسیر آخرین قیمت. **فقط زنده یا Playback با داده ضبط‌شده** |
 
 > ارتقا از نسخه‌های قبلی: پوشه‌های قدیمی `AddOns\GoldOrderFlow` و `Indicators\GoldOrderFlow` را از `bin\Custom` حذف کنید و اندیکاتورها را دوباره روی چارت اضافه کنید.
 

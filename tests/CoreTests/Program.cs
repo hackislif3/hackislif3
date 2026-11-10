@@ -31,6 +31,8 @@ internal static class Program
         DeterminismTest();
         NewsTest();
         ZoneBreakTest();
+        RthSplitTest();
+        DepthBookTest();
         PerfTest();
         Console.WriteLine();
         Console.WriteLine("passed " + passes + ", failed " + failures);
@@ -467,6 +469,59 @@ internal static class Program
         e.ProcessTrade(Pr(t.AddMinutes(2).AddSeconds(1), 1999.8, 1, 1999.8, 1999.9), 2);
         e.FinalizeBar(2, t.AddMinutes(3), 2000.0, 2000.0, 1999.8, 1999.8, 1);
         Check(e.Zones[0].BrokenBar == 2, "trading below a buy zone breaks it on that bar");
+    }
+
+    private static void RthSplitTest()
+    {
+        Console.WriteLine("[RTH / Overnight split]");
+        EngineSettings st = TestSettings();   // platform zone = ET, RTH 08:20-13:30 ET
+        OrderFlowEngine e = new OrderFlowEngine(st);
+        DateTime open = new DateTime(2026, 1, 5, 18, 0, 0);       // 18:00 ET session open belongs to the next trading day
+        e.OnSessionStart(new DateTime(2026, 1, 6), open, 0);
+        int bar = 0;
+        DateTime[] times = { open.AddMinutes(5), new DateTime(2026, 1, 6, 3, 0, 0), new DateTime(2026, 1, 6, 8, 25, 0), new DateTime(2026, 1, 6, 12, 0, 0), new DateTime(2026, 1, 6, 14, 0, 0) };
+        double[] prices = { 2000.0, 2001.0, 2005.0, 2006.0, 2003.0 };
+        for (int i = 0; i < times.Length; i++)
+        {
+            e.BeginBar(bar, times[i]);
+            e.ProcessTrade(Pr(times[i], prices[i], 10, prices[i] - 0.1, prices[i]), bar);
+            e.FinalizeBar(bar, times[i].AddMinutes(1), prices[i], prices[i], prices[i], prices[i], 10);
+            bar++;
+        }
+        VolumeProfileEngine pe = e.Profiles;
+        Check(pe.CurrentOvernight != null && pe.CurrentOvernight.Ladder.TotalVolume == 20 && pe.CurrentOvernight.Ladder.MaxTick == 20010,
+              "overnight = prints before the RTH open (ONH 2001.0)");
+        Check(pe.CurrentRth != null && pe.CurrentRth.Ladder.TotalVolume == 20 && pe.CurrentRth.StartBar == 2, "RTH = prints inside 08:20-13:30 ET, starts at its first bar");
+        Check(pe.CurrentPostRth != null && pe.CurrentPostRth.Ladder.TotalVolume == 10, "post-RTH = prints after 13:30 ET");
+        DateTime next = new DateTime(2026, 1, 6, 18, 0, 0);
+        e.OnSessionStart(new DateTime(2026, 1, 7), next, bar);
+        Check(pe.CompletedSegments.Count == 3 && pe.CurrentOvernight == null && pe.CurrentRth == null, "segments complete at the next trading day");
+    }
+
+    private static void DepthBookTest()
+    {
+        Console.WriteLine("[Depth book / heatmap store]");
+        DepthBook b = new DepthBook();
+        b.Apply(true, DepthOperation.Add, 0, 20000, 10);
+        b.Apply(true, DepthOperation.Add, 1, 19999, 20);
+        b.Apply(true, DepthOperation.Add, 0, 20001, 5);     // new best bid inserted at the top
+        b.Apply(false, DepthOperation.Add, 0, 20002, 7);
+        Check(b.BidCount == 3 && b.BidTick(0) == 20001 && b.BidTick(1) == 20000 && b.BidSize(2) == 20, "insert by position keeps ladder order");
+        b.Apply(true, DepthOperation.Update, 1, 20000, 99);
+        b.Apply(true, DepthOperation.Remove, 0, 0, 0);
+        Check(b.BidCount == 2 && b.BidTick(0) == 20000 && b.BidSize(0) == 99 && b.MaxSize == 99, "update and remove by position");
+        HeatmapColumn c = b.Snapshot(5, DateTime.Today, 20001);
+        Check(c.Ticks.Length == 3 && c.Side[0] == 1 && c.Side[2] == 2 && c.Sizes[2] == 7, "snapshot copies both sides");
+        b.Apply(true, DepthOperation.Update, 0, 20000, 1);
+        Check(c.Sizes[0] == 99, "snapshot is an independent copy");
+
+        HeatmapStore s = new HeatmapStore();
+        s.MaxColumns = 100;
+        for (int i = 0; i < 300; i++) { HeatmapColumn col = new HeatmapColumn(); col.Bar = i / 10; col.Ticks = new long[] { 1 }; col.Sizes = new long[] { i % 10 + 1 }; col.Side = new byte[] { 1 }; s.Add(col); }
+        Check(s.Count <= 110 && s[s.Count - 1].Bar == 29, "store is bounded and keeps the newest snapshots");
+        Check(s.FirstIndexAtOrAfter(25) < s.Count && s[s.FirstIndexAtOrAfter(25)].Bar == 25, "bar lookup");
+        double sc = s.ScaleFor(20, 29, 90, 10000);
+        Check(sc >= 9 && sc <= 10, "percentile colour scale (got " + sc + ")");
     }
 
     private static void PerfTest()

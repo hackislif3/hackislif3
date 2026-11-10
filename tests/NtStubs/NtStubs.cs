@@ -44,6 +44,9 @@ namespace System.Windows.Media
         public static SolidColorBrush Transparent { get { return new SolidColorBrush(Color.FromArgb(0, 255, 255, 255)); } }
         public static SolidColorBrush DodgerBlue { get { return B(30, 144, 255); } }
         public static SolidColorBrush DimGray { get { return B(105, 105, 105); } }
+        public static SolidColorBrush Orchid { get { return B(128, 128, 128); } }
+        public static SolidColorBrush IndianRed { get { return B(128, 128, 128); } }
+        public static SolidColorBrush SeaGreen { get { return B(128, 128, 128); } }
     }
 }
 
