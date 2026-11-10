@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
+namespace NinjaTrader.NinjaScript.AddOns.DrTrader
 {
     /// <summary>Dense, auto-growing volume-at-price ladder keyed by tick index.</summary>
     public sealed class PriceLadder

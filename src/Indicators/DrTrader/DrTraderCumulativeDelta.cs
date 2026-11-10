@@ -1,5 +1,5 @@
 // Gold Order Flow - Cumulative Delta panel (CVD candles / line, bar delta histogram, delta %, divergence markers).
-// Uses the same engine as GoldOrderFlowAnalyzer with only the delta + divergence modules enabled.
+// Uses the same engine as DrTraderOrderFlow with only the delta + divergence modules enabled.
 #region Using declarations
 using System;
 using System.Collections.Generic;
@@ -13,12 +13,12 @@ using NinjaTrader.Data;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
 using NinjaTrader.NinjaScript;
-using NinjaTrader.NinjaScript.AddOns.GoldOrderFlow;
+using NinjaTrader.NinjaScript.AddOns.DrTrader;
 #endregion
 
 namespace NinjaTrader.NinjaScript.Indicators
 {
-    public class GoldCumulativeDelta : Indicator
+    public class DrTraderCumulativeDelta : Indicator
     {
         private OrderFlowEngine engine;
         private TradeIntake intake;
@@ -37,7 +37,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             if (State == State.SetDefaults)
             {
                 Description = "Cumulative volume delta for GC/MGC from classified prints (exact with Tick Replay, estimated otherwise).";
-                Name = "GoldCumulativeDelta";
+                Name = "DrTraderCumulativeDelta";
                 Calculate = Calculate.OnEachTick;
                 IsOverlay = false;
                 DisplayInDataBox = true;
@@ -168,7 +168,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 }
                 catch (Exception ex)
                 {
-                    if (!errorLogged) { errorLogged = true; Log("GoldCumulativeDelta: " + ex.Message, LogLevel.Error); }
+                    if (!errorLogged) { errorLogged = true; Log("DrTraderCumulativeDelta: " + ex.Message, LogLevel.Error); }
                 }
                 // nothing is alerted from this panel; drain so the queue cannot grow
                 engine.DrainEvents(null);
@@ -282,7 +282,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 }
                 catch (Exception ex)
                 {
-                    if (!errorLogged) { errorLogged = true; Print("GoldCumulativeDelta render error: " + ex); }
+                    if (!errorLogged) { errorLogged = true; Print("DrTraderCumulativeDelta render error: " + ex); }
                 }
             }
         }
@@ -370,19 +370,19 @@ namespace NinjaTrader.NinjaScript.Indicators
 {
 	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
 	{
-		private GoldCumulativeDelta[] cacheGoldCumulativeDelta;
-		public GoldCumulativeDelta GoldCumulativeDelta()
+		private DrTraderCumulativeDelta[] cacheDrTraderCumulativeDelta;
+		public DrTraderCumulativeDelta DrTraderCumulativeDelta()
 		{
-			return GoldCumulativeDelta(Input);
+			return DrTraderCumulativeDelta(Input);
 		}
 
-		public GoldCumulativeDelta GoldCumulativeDelta(ISeries<double> input)
+		public DrTraderCumulativeDelta DrTraderCumulativeDelta(ISeries<double> input)
 		{
-			if (cacheGoldCumulativeDelta != null)
-				for (int idx = 0; idx < cacheGoldCumulativeDelta.Length; idx++)
-					if (cacheGoldCumulativeDelta[idx] != null &&  cacheGoldCumulativeDelta[idx].EqualsInput(input))
-						return cacheGoldCumulativeDelta[idx];
-			return CacheIndicator<GoldCumulativeDelta>(new GoldCumulativeDelta(), input, ref cacheGoldCumulativeDelta);
+			if (cacheDrTraderCumulativeDelta != null)
+				for (int idx = 0; idx < cacheDrTraderCumulativeDelta.Length; idx++)
+					if (cacheDrTraderCumulativeDelta[idx] != null &&  cacheDrTraderCumulativeDelta[idx].EqualsInput(input))
+						return cacheDrTraderCumulativeDelta[idx];
+			return CacheIndicator<DrTraderCumulativeDelta>(new DrTraderCumulativeDelta(), input, ref cacheDrTraderCumulativeDelta);
 		}
 	}
 }
@@ -391,14 +391,14 @@ namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
 {
 	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
 	{
-		public Indicators.GoldCumulativeDelta GoldCumulativeDelta()
+		public Indicators.DrTraderCumulativeDelta DrTraderCumulativeDelta()
 		{
-			return indicator.GoldCumulativeDelta(Input);
+			return indicator.DrTraderCumulativeDelta(Input);
 		}
 
-		public Indicators.GoldCumulativeDelta GoldCumulativeDelta(ISeries<double> input )
+		public Indicators.DrTraderCumulativeDelta DrTraderCumulativeDelta(ISeries<double> input )
 		{
-			return indicator.GoldCumulativeDelta(input);
+			return indicator.DrTraderCumulativeDelta(input);
 		}
 	}
 }
@@ -407,14 +407,14 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
 	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
 	{
-		public Indicators.GoldCumulativeDelta GoldCumulativeDelta()
+		public Indicators.DrTraderCumulativeDelta DrTraderCumulativeDelta()
 		{
-			return indicator.GoldCumulativeDelta(Input);
+			return indicator.DrTraderCumulativeDelta(Input);
 		}
 
-		public Indicators.GoldCumulativeDelta GoldCumulativeDelta(ISeries<double> input )
+		public Indicators.DrTraderCumulativeDelta DrTraderCumulativeDelta(ISeries<double> input )
 		{
-			return indicator.GoldCumulativeDelta(input);
+			return indicator.DrTraderCumulativeDelta(input);
 		}
 	}
 }

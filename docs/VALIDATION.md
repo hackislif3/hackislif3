@@ -25,7 +25,7 @@
 * **Signals:** درصد سیگنال‌هایی که MAE آن‌ها قبل از هر MFE معنی‌دار از 1 ATR بیشتر شده است.
 
 ## د) ارزیابی آماری سیگنال‌ها (Out-of-Sample)
-1. `Write CSV logs = true`، `Log historical bars = true`. فایل‌ها در `Documents\NinjaTrader 8\GoldOrderFlow`:
+1. `Write CSV logs = true`، `Log historical bars = true`. فایل‌ها در `Documents\NinjaTrader 8\DrTrader`:
    * `signals_*.csv` : زمان، نوع، امتیاز، همه مؤلفه‌ها و flagها (برای وزن‌دهی شفاف)
    * `outcomes_*.csv`: MFE / MAE / بازده بسته‌شدن در افق‌های 5، 10، 20 کندل (پس از رخداد اندازه‌گیری می‌شود و به موتور بازخورد داده نمی‌شود)
    * `events_*.csv` : همه رویدادها شامل DataGap

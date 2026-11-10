@@ -1,5 +1,5 @@
 // Gold Institutional Order Flow Analyzer - main price-panel indicator for NinjaTrader 8.
-// Engines live in AddOns\GoldOrderFlow (pure C#). This file only: (1) feeds NinjaTrader events into the engine,
+// Engines live in AddOns\DrTrader (pure C#). This file only: (1) feeds NinjaTrader events into the engine,
 // (2) renders the engine state with SharpDX, (3) raises alerts and writes logs.
 #region Using declarations
 using System;
@@ -15,12 +15,12 @@ using NinjaTrader.Data;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
 using NinjaTrader.NinjaScript;
-using NinjaTrader.NinjaScript.AddOns.GoldOrderFlow;
+using NinjaTrader.NinjaScript.AddOns.DrTrader;
 #endregion
 
 namespace NinjaTrader.NinjaScript.Indicators
 {
-    public class GoldOrderFlowAnalyzer : Indicator
+    public class DrTraderOrderFlow : Indicator
     {
         #region Fields
         private OrderFlowEngine engine;
@@ -57,8 +57,6 @@ namespace NinjaTrader.NinjaScript.Indicators
         private readonly Dictionary<string, SharpDX.Direct2D1.SolidColorBrush> dxBrushes = new Dictionary<string, SharpDX.Direct2D1.SolidColorBrush>();
         private SharpDX.DirectWrite.TextFormat textFormat;
         private SharpDX.DirectWrite.TextFormat smallFormat;
-        private SharpDX.DirectWrite.TextFormat footFormat;
-        private SharpDX.DirectWrite.TextFormat footBoldFormat;
         private SharpDX.Direct2D1.StrokeStyle dashStyle;
         private ProfileStats rangeStats;
         private int rangeFrom = -1, rangeTo = -1;
@@ -71,7 +69,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             if (State == State.SetDefaults)
             {
                 Description = "Gold (GC/MGC) order flow: exact volume profile, CVD, large trades, absorption and a transparent multi-factor signal engine.";
-                Name = "GoldOrderFlowAnalyzer";
+                Name = "DrTraderOrderFlow";
                 Calculate = Calculate.OnEachTick;
                 IsOverlay = true;
                 DisplayInDataBox = false;
@@ -119,7 +117,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 if (EnableCsvLog)
                 {
                     logger = new SignalCsvLogger();
-                    string folder = string.IsNullOrEmpty(LogFolder) ? Path.Combine(NinjaTrader.Core.Globals.UserDataDir, "GoldOrderFlow") : LogFolder;
+                    string folder = string.IsNullOrEmpty(LogFolder) ? Path.Combine(NinjaTrader.Core.Globals.UserDataDir, "DrTrader") : LogFolder;
                     if (!logger.Open(folder, Instrument.FullName))
                     {
                         engine.Warnings.Add("CSV log disabled: " + logger.LastError);
@@ -138,8 +136,6 @@ namespace NinjaTrader.NinjaScript.Indicators
                 DisposeDx();
                 if (textFormat != null) { textFormat.Dispose(); textFormat = null; }
                 if (smallFormat != null) { smallFormat.Dispose(); smallFormat = null; }
-                if (footFormat != null) { footFormat.Dispose(); footFormat = null; }
-                if (footBoldFormat != null) { footBoldFormat.Dispose(); footBoldFormat = null; }
             }
         }
 
@@ -346,8 +342,8 @@ namespace NinjaTrader.NinjaScript.Indicators
                     if (!errorLogged)
                     {
                         errorLogged = true;
-                        Log("GoldOrderFlowAnalyzer: " + ex.Message, LogLevel.Error);
-                        Print("GoldOrderFlowAnalyzer error: " + ex);
+                        Log("DrTraderOrderFlow: " + ex.Message, LogLevel.Error);
+                        Print("DrTraderOrderFlow error: " + ex);
                     }
                 }
             }
@@ -466,7 +462,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             string msg = Instrument.FullName + " " + e.Message + " @ " + Instrument.MasterInstrument.FormatPrice(e.Price);
             string sound = PlaySounds && !string.IsNullOrEmpty(AlertSound) ? Path.Combine(NinjaTrader.Core.Globals.InstallDir, "sounds", AlertSound) : string.Empty;
             Brush back = e.Side > 0 ? BullSignalBrush : (e.Side < 0 ? BearSignalBrush : NeutralBrush);
-            Alert("GOF_" + key, cat == "Signal" ? Priority.High : Priority.Medium, msg, sound, Math.Max(1, AlertCooldownSeconds), back, Brushes.White);
+            Alert("DRT_" + key, cat == "Signal" ? Priority.High : Priority.Medium, msg, sound, Math.Max(1, AlertCooldownSeconds), back, Brushes.White);
             lastAlertText = cat + ": " + e.Message;
             lastAlertWall = now;
         }
@@ -552,8 +548,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                     EnsureResources();
                     RenderTarget.AntialiasMode = SharpDX.Direct2D1.AntialiasMode.PerPrimitive;
                     int from = Math.Max(0, ChartBars.FromIndex), to = ChartBars.ToIndex;
-                    if (ShowFootprint) RenderFootprints(chartControl, chartScale, from, to);
-                    if (EnableProfiles && ShowSessionProfiles && !ShowFootprint) RenderInPlaceProfiles(chartControl, chartScale, from, to);
+                    if (EnableProfiles && ShowSessionProfiles) RenderInPlaceProfiles(chartControl, chartScale, from, to);
                     if (EnableProfiles && PanelSource != GofPanelProfileSource.None) RenderPanelProfile(chartControl, chartScale, from, to);
                     if (EnableProfiles) RenderLevels(chartControl, chartScale, from, to);
                     if (ShowImbalanceZones) RenderZones(chartControl, chartScale, from, to);
@@ -565,7 +560,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 }
                 catch (Exception ex)
                 {
-                    if (!errorLogged) { errorLogged = true; Print("GoldOrderFlowAnalyzer render error: " + ex); }
+                    if (!errorLogged) { errorLogged = true; Print("DrTraderOrderFlow render error: " + ex); }
                 }
                 finally
                 {
@@ -756,142 +751,6 @@ namespace NinjaTrader.NinjaScript.Indicators
             }
         }
 
-        private SharpDX.DirectWrite.TextFormat MakeFootFormat(SharpDX.DirectWrite.FontWeight weight)
-        {
-            SharpDX.DirectWrite.TextFormat f = new SharpDX.DirectWrite.TextFormat(NinjaTrader.Core.Globals.DirectWriteFactory, "Consolas",
-                weight, SharpDX.DirectWrite.FontStyle.Normal, (float)FootprintFontSize);
-            f.TextAlignment = SharpDX.DirectWrite.TextAlignment.Center;
-            f.ParagraphAlignment = SharpDX.DirectWrite.ParagraphAlignment.Center;
-            f.WordWrapping = SharpDX.DirectWrite.WordWrapping.NoWrap;
-            return f;
-        }
-
-        /// <summary>
-        /// Footprint: executed volume (or print count) at every price inside each bar, split into sell (at bid) x buy (at ask).
-        /// Uses the same classified prints as every other module; bars older than "Max footprint bars kept" are not drawn.
-        /// Numbers are only drawn when a price row is tall enough and the bar wide enough.
-        /// Imbalances are always evaluated on CONTRACT volume (ratio / min volume of group 07), whatever is displayed.
-        /// </summary>
-        private void RenderFootprints(ChartControl cc, ChartScale cs, int from, int to)
-        {
-            double ts = TickSize;
-            float colW = Math.Max(3f, cc.Properties.BarDistance * 0.92f);
-            float rowH = Math.Abs(Y(cs, cs.MinValue) - Y(cs, cs.MinValue + ts));
-            if (rowH < 1f) return;
-            if (footFormat == null || Math.Abs(footFormat.FontSize - (float)FootprintFontSize) > 0.01f)
-            {
-                if (footFormat != null) footFormat.Dispose();
-                if (footBoldFormat != null) footBoldFormat.Dispose();
-                footFormat = MakeFootFormat(SharpDX.DirectWrite.FontWeight.Normal);
-                footBoldFormat = MakeFootFormat(SharpDX.DirectWrite.FontWeight.Bold);
-            }
-            bool classic = FootprintStyle == GofFootprintStyle.Classic;
-            float strip = classic ? Math.Max(2f, Math.Min(5f, colW * 0.06f)) : 0f;   // candle strip on the left
-            float cellX = strip > 0 ? strip + 1f : 0f;
-            float cellW = colW - cellX;
-            bool drawText = rowH >= FootprintMinRowPixels && colW >= FootprintMinBarPixels;
-            double ratio = engine.Settings.Bars.ImbalanceRatio;
-            long minImb = engine.Settings.Bars.ImbalanceMinVolume;
-            double top = cs.MaxValue, bottom = cs.MinValue;
-            SharpDX.Direct2D1.SolidColorBrush back = Dx(cc.Properties.ChartBackground, 100);
-            // numbers are drawn directly on the chart background: pick black/white automatically for contrast
-            SolidColorBrush bgb = cc.Properties.ChartBackground as SolidColorBrush;
-            bool lightBg = bgb != null && (0.299 * bgb.Color.R + 0.587 * bgb.Color.G + 0.114 * bgb.Color.B) > 140;
-            SharpDX.Direct2D1.SolidColorBrush text = FootprintAutoTextColor ? Dx(lightBg ? Brushes.Black : Brushes.WhiteSmoke, 100) : Dx(TextBrush, 100);
-            SharpDX.Direct2D1.SolidColorBrush buyText = Dx(BuyBrush, 100);
-            SharpDX.Direct2D1.SolidColorBrush sellText = Dx(SellBrush, 100);
-            SharpDX.Direct2D1.SolidColorBrush buyFill = Dx(BuyBrush, FootprintImbalanceOpacity);
-            SharpDX.Direct2D1.SolidColorBrush sellFill = Dx(SellBrush, FootprintImbalanceOpacity);
-            SharpDX.Direct2D1.SolidColorBrush grid = Dx(NeutralBrush, 35);
-            SharpDX.Direct2D1.SolidColorBrush pocLine = Dx(PocBrush, 100);
-            bool counts = FootprintMode == GofFootprintMode.TradeCount;
-
-            for (int bar = from; bar <= to; bar++)
-            {
-                BarFootprint f = engine.Footprints.Get(bar);
-                if (f == null || !f.Ladder.HasData) continue;
-                PriceLadder l = f.Ladder;
-                PriceLadder shown = counts ? f.Trades : f.Ladder;
-                long maxVol = 1, maxAbsDelta = 1, pocTick = l.MinTick;
-                for (long t = l.MinTick; t <= l.MaxTick; t++)
-                {
-                    long v = l.VolumeAt(t);
-                    if (v > maxVol) { maxVol = v; pocTick = t; }
-                    long d = Math.Abs(l.BuyAt(t) - l.SellAt(t));
-                    if (d > maxAbsDelta) maxAbsDelta = d;
-                }
-                float x0 = X(cc, bar) - colW / 2f;
-                float yHi = Y(cs, (l.MaxTick + 0.5) * ts), yLo = Y(cs, (l.MinTick - 0.5) * ts);
-                if (FootprintOpaque) RenderTarget.FillRectangle(new SharpDX.RectangleF(x0, yHi, colW, yLo - yHi), back);
-
-                if (classic && bar >= 0 && bar < Bars.Count)
-                {
-                    double o = Bars.GetOpen(bar), c = Bars.GetClose(bar);
-                    SharpDX.Direct2D1.SolidColorBrush sb = c >= o ? buyText : sellText;
-                    float yo = Y(cs, o), yc = Y(cs, c);
-                    RenderTarget.DrawLine(new SharpDX.Vector2(x0 + strip / 2f, Y(cs, Bars.GetHigh(bar))), new SharpDX.Vector2(x0 + strip / 2f, Y(cs, Bars.GetLow(bar))), sb, 1f);
-                    RenderTarget.FillRectangle(new SharpDX.RectangleF(x0, Math.Min(yo, yc), strip, Math.Max(1f, Math.Abs(yc - yo))), sb);
-                    RenderTarget.DrawRectangle(new SharpDX.RectangleF(x0 + cellX, yHi, cellW, yLo - yHi), grid, 1f);
-                }
-
-                for (long t = l.MinTick; t <= l.MaxTick; t++)
-                {
-                    double price = t * ts;
-                    if (price - ts / 2 > top || price + ts / 2 < bottom) continue;
-                    float y = Y(cs, price + ts / 2);
-                    float cx = x0 + cellX, ch = Math.Max(1f, rowH - (rowH > 4 ? 1f : 0f));
-                    SharpDX.RectangleF cell = new SharpDX.RectangleF(cx, y, cellW, ch);
-                    long b = l.BuyAt(t), sl = l.SellAt(t), v = l.VolumeAt(t);
-                    bool buyImb = FootprintHighlightImbalance && b >= minImb && b >= ratio * l.SellAt(t - 1);
-                    bool sellImb = FootprintHighlightImbalance && sl >= minImb && sl >= ratio * l.BuyAt(t + 1);
-
-                    if (classic)
-                    {
-                        // colour ONLY imbalanced sides: left half = sell imbalance, right half = buy imbalance
-                        if (sellImb) RenderTarget.FillRectangle(new SharpDX.RectangleF(cx, y, cellW / 2f, ch), sellFill);
-                        if (buyImb) RenderTarget.FillRectangle(new SharpDX.RectangleF(cx + cellW / 2f, y, cellW / 2f, ch), buyFill);
-                    }
-                    else if (v > 0)
-                    {
-                        Brush cb;
-                        double intensity;
-                        if (FootprintMode == GofFootprintMode.Volume) { cb = ProfileBrush; intensity = (double)v / maxVol; }
-                        else { cb = b >= sl ? BuyBrush : SellBrush; intensity = (double)Math.Abs(b - sl) / maxAbsDelta; }
-                        RenderTarget.FillRectangle(cell, Dx(cb, FootprintCellOpacity * (0.15 + 0.85 * intensity)));
-                    }
-                    if (t == pocTick && !classic) RenderTarget.DrawRectangle(cell, pocLine, 1f);
-                    if (!drawText) continue;
-
-                    SharpDX.DirectWrite.TextFormat fmt = t == pocTick ? footBoldFormat : footFormat;
-                    if (FootprintMode == GofFootprintMode.BidAsk || counts)
-                    {
-                        long sv = shown.SellAt(t), bv = shown.BuyAt(t);
-                        SharpDX.RectangleF left = new SharpDX.RectangleF(cx, y, cellW / 2f - 4f, rowH);
-                        SharpDX.RectangleF right = new SharpDX.RectangleF(cx + cellW / 2f + 4f, y, cellW / 2f - 4f, rowH);
-                        RenderTarget.DrawText(sv.ToString(CultureInfo.InvariantCulture), fmt, left, classic ? text : (sellImb ? sellText : text));
-                        RenderTarget.DrawText("x", footFormat, new SharpDX.RectangleF(cx, y, cellW, rowH), Dx(NeutralBrush, 100));
-                        RenderTarget.DrawText(bv.ToString(CultureInfo.InvariantCulture), fmt, right, classic ? text : (buyImb ? buyText : text));
-                    }
-                    else
-                    {
-                        long val = FootprintMode == GofFootprintMode.Delta ? b - sl : v;
-                        SharpDX.Direct2D1.SolidColorBrush tb = FootprintMode == GofFootprintMode.Delta && !classic ? (val >= 0 ? buyText : sellText) : text;
-                        RenderTarget.DrawText(val.ToString(CultureInfo.InvariantCulture), fmt, cell, tb);
-                    }
-                }
-                if (FootprintShowTotals && drawText)
-                {
-                    float lineH = (float)FootprintFontSize + 4f;
-                    float yb = yLo + 2f;
-                    long d = f.Delta;
-                    RenderTarget.DrawText("\u0394 " + d.ToString(CultureInfo.InvariantCulture), footFormat, new SharpDX.RectangleF(x0, yb, colW, lineH), d >= 0 ? buyText : sellText);
-                    RenderTarget.DrawText("V " + f.Volume.ToString(CultureInfo.InvariantCulture), footFormat, new SharpDX.RectangleF(x0, yb + lineH, colW, lineH), text);
-                    RenderTarget.DrawText("T " + f.Trades.TotalSell.ToString(CultureInfo.InvariantCulture) + "x" + f.Trades.TotalBuy.ToString(CultureInfo.InvariantCulture),
-                        footFormat, new SharpDX.RectangleF(x0, yb + 2 * lineH, colW, lineH), text);
-                }
-            }
-        }
-
         private void RenderZones(ChartControl cc, ChartScale cs, int from, int to)
         {
             List<StackedImbalanceZone> z = engine.Zones;
@@ -1062,7 +921,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             List<string> lines = new List<string>();
             DeltaEngine d = engine.Delta;
             double ts = TickSize;
-            lines.Add("GOF " + Instrument.FullName + "  |  " + engine.Quality.SourceDescription);
+            lines.Add("DrTrader " + Instrument.FullName + "  |  " + engine.Quality.SourceDescription);
             lines.Add("Day " + (engine.HasSession ? engine.CurrentTradingDay.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : "-") + "  window " + engine.LastWindow +
                       "  RVOL " + (double.IsNaN(engine.LastRvol) ? "n/a" : engine.LastRvol.ToString("0.00", CultureInfo.InvariantCulture)));
             double dp = d.SessionVolume > 0 ? 100.0 * d.SessionCvd / d.SessionVolume : 0;
@@ -1303,19 +1162,6 @@ namespace NinjaTrader.NinjaScript.Indicators
             LogHistorical = true;
             LogFolder = string.Empty;
             OutcomeHorizons = "5,10,20";
-
-            ShowFootprint = false;
-            FootprintMode = GofFootprintMode.BidAsk;
-            FootprintStyle = GofFootprintStyle.Classic;
-            FootprintImbalanceOpacity = 70;
-            FootprintAutoTextColor = true;
-            FootprintOpaque = true;
-            FootprintFontSize = 9;
-            FootprintMinRowPixels = 11;
-            FootprintMinBarPixels = 50;
-            FootprintCellOpacity = 45;
-            FootprintHighlightImbalance = true;
-            FootprintShowTotals = true;
         }
         #endregion
 
@@ -1601,22 +1447,8 @@ namespace NinjaTrader.NinjaScript.Indicators
         [XmlIgnore] [Display(Name = "Text", Order = 28, GroupName = "13. Visual")] public Brush TextBrush { get; set; }
         [Browsable(false)] public string TextBrushSerializable { get { return Serialize.BrushToString(TextBrush); } set { TextBrush = Serialize.StringToBrush(value); } }
 
-        // ---------------- 15. Footprint (volume at price inside each bar)
-        [Display(Name = "Show footprint", Description = "Draws sell x buy volume at every price inside each bar (replaces the in-place daily profiles while on).", Order = 1, GroupName = "15. Footprint")] public bool ShowFootprint { get; set; }
-        [Display(Name = "Footprint mode", Description = "BidAsk: sell x buy contracts. TradeCount: sell x buy number of trades (prints, not orders). Delta: buy - sell. Volume: total.", Order = 2, GroupName = "15. Footprint")] public GofFootprintMode FootprintMode { get; set; }
-        [Display(Name = "Footprint style", Description = "Classic: neutral cells, colour only on imbalances, candle strip. Heatmap: cells coloured by delta/volume.", Order = 10, GroupName = "15. Footprint")] public GofFootprintStyle FootprintStyle { get; set; }
-        [Range(0, 100)] [Display(Name = "Imbalance fill opacity %", Order = 11, GroupName = "15. Footprint")] public double FootprintImbalanceOpacity { get; set; }
-        [Display(Name = "Auto text color", Description = "Black numbers on a light chart background, white on a dark one. Off: use the Text color of group 13.", Order = 12, GroupName = "15. Footprint")] public bool FootprintAutoTextColor { get; set; }
-        [Display(Name = "Hide candles behind cells", Order = 3, GroupName = "15. Footprint")] public bool FootprintOpaque { get; set; }
-        [Range(6, 20)] [Display(Name = "Font size", Order = 4, GroupName = "15. Footprint")] public double FootprintFontSize { get; set; }
-        [Range(4, 60)] [Display(Name = "Min row height for numbers (px)", Order = 5, GroupName = "15. Footprint")] public double FootprintMinRowPixels { get; set; }
-        [Range(10, 400)] [Display(Name = "Min bar width for numbers (px)", Order = 6, GroupName = "15. Footprint")] public double FootprintMinBarPixels { get; set; }
-        [Range(0, 100)] [Display(Name = "Heatmap cell opacity %", Order = 7, GroupName = "15. Footprint")] public double FootprintCellOpacity { get; set; }
-        [Display(Name = "Highlight diagonal imbalances", Description = "Uses the imbalance ratio / min volume from group 07.", Order = 8, GroupName = "15. Footprint")] public bool FootprintHighlightImbalance { get; set; }
-        [Display(Name = "Show bar delta / volume", Order = 9, GroupName = "15. Footprint")] public bool FootprintShowTotals { get; set; }
-
         // ---------------- 14. Logging / validation
-        [Display(Name = "Write CSV logs", Description = "signals_*.csv, outcomes_*.csv, events_*.csv in Documents\\NinjaTrader 8\\GoldOrderFlow", Order = 1, GroupName = "14. Logging")] public bool EnableCsvLog { get; set; }
+        [Display(Name = "Write CSV logs", Description = "signals_*.csv, outcomes_*.csv, events_*.csv in Documents\\NinjaTrader 8\\DrTrader", Order = 1, GroupName = "14. Logging")] public bool EnableCsvLog { get; set; }
         [Display(Name = "Log historical bars", Order = 2, GroupName = "14. Logging")] public bool LogHistorical { get; set; }
         [Display(Name = "Log folder (empty = default)", Order = 3, GroupName = "14. Logging")] public string LogFolder { get; set; }
         [Display(Name = "Outcome horizons (bars)", Order = 4, GroupName = "14. Logging")] public string OutcomeHorizons { get; set; }
@@ -1630,19 +1462,19 @@ namespace NinjaTrader.NinjaScript.Indicators
 {
 	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
 	{
-		private GoldOrderFlowAnalyzer[] cacheGoldOrderFlowAnalyzer;
-		public GoldOrderFlowAnalyzer GoldOrderFlowAnalyzer()
+		private DrTraderOrderFlow[] cacheDrTraderOrderFlow;
+		public DrTraderOrderFlow DrTraderOrderFlow()
 		{
-			return GoldOrderFlowAnalyzer(Input);
+			return DrTraderOrderFlow(Input);
 		}
 
-		public GoldOrderFlowAnalyzer GoldOrderFlowAnalyzer(ISeries<double> input)
+		public DrTraderOrderFlow DrTraderOrderFlow(ISeries<double> input)
 		{
-			if (cacheGoldOrderFlowAnalyzer != null)
-				for (int idx = 0; idx < cacheGoldOrderFlowAnalyzer.Length; idx++)
-					if (cacheGoldOrderFlowAnalyzer[idx] != null &&  cacheGoldOrderFlowAnalyzer[idx].EqualsInput(input))
-						return cacheGoldOrderFlowAnalyzer[idx];
-			return CacheIndicator<GoldOrderFlowAnalyzer>(new GoldOrderFlowAnalyzer(), input, ref cacheGoldOrderFlowAnalyzer);
+			if (cacheDrTraderOrderFlow != null)
+				for (int idx = 0; idx < cacheDrTraderOrderFlow.Length; idx++)
+					if (cacheDrTraderOrderFlow[idx] != null &&  cacheDrTraderOrderFlow[idx].EqualsInput(input))
+						return cacheDrTraderOrderFlow[idx];
+			return CacheIndicator<DrTraderOrderFlow>(new DrTraderOrderFlow(), input, ref cacheDrTraderOrderFlow);
 		}
 	}
 }
@@ -1651,14 +1483,14 @@ namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
 {
 	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
 	{
-		public Indicators.GoldOrderFlowAnalyzer GoldOrderFlowAnalyzer()
+		public Indicators.DrTraderOrderFlow DrTraderOrderFlow()
 		{
-			return indicator.GoldOrderFlowAnalyzer(Input);
+			return indicator.DrTraderOrderFlow(Input);
 		}
 
-		public Indicators.GoldOrderFlowAnalyzer GoldOrderFlowAnalyzer(ISeries<double> input )
+		public Indicators.DrTraderOrderFlow DrTraderOrderFlow(ISeries<double> input )
 		{
-			return indicator.GoldOrderFlowAnalyzer(input);
+			return indicator.DrTraderOrderFlow(input);
 		}
 	}
 }
@@ -1667,14 +1499,14 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
 	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
 	{
-		public Indicators.GoldOrderFlowAnalyzer GoldOrderFlowAnalyzer()
+		public Indicators.DrTraderOrderFlow DrTraderOrderFlow()
 		{
-			return indicator.GoldOrderFlowAnalyzer(Input);
+			return indicator.DrTraderOrderFlow(Input);
 		}
 
-		public Indicators.GoldOrderFlowAnalyzer GoldOrderFlowAnalyzer(ISeries<double> input )
+		public Indicators.DrTraderOrderFlow DrTraderOrderFlow(ISeries<double> input )
 		{
-			return indicator.GoldOrderFlowAnalyzer(input);
+			return indicator.DrTraderOrderFlow(input);
 		}
 	}
 }

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 
-namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
+namespace NinjaTrader.NinjaScript.AddOns.DrTrader
 {
     public static class TimeZoneResolver
     {

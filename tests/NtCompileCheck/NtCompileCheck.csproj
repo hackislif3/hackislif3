@@ -9,8 +9,8 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../src/AddOns/GoldOrderFlow/*.cs" />
-    <Compile Include="../../src/Indicators/GoldOrderFlow/*.cs" />
+    <Compile Include="../../src/AddOns/DrTrader/*.cs" />
+    <Compile Include="../../src/Indicators/DrTrader/*.cs" />
     <Compile Include="../NtStubs/NtStubs.cs" />
   </ItemGroup>
 </Project>

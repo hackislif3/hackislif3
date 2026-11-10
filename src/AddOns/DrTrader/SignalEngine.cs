@@ -5,7 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
+namespace NinjaTrader.NinjaScript.AddOns.DrTrader
 {
     public sealed class SignalSettings
     {

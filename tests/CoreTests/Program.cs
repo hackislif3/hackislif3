@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using NinjaTrader.NinjaScript.AddOns.GoldOrderFlow;
+using NinjaTrader.NinjaScript.AddOns.DrTrader;
 
 internal static class Program
 {
@@ -18,7 +18,7 @@ internal static class Program
 
     private static int Main()
     {
-        Console.WriteLine("GOF core tests");
+        Console.WriteLine("DrTrader core tests");
         LadderTests();
         ProfileTests();
         ClassifierTests();
@@ -30,6 +30,7 @@ internal static class Program
         AbsorptionTest();
         DeterminismTest();
         NewsTest();
+        ZoneBreakTest();
         PerfTest();
         Console.WriteLine();
         Console.WriteLine("passed " + passes + ", failed " + failures);
@@ -446,6 +447,26 @@ internal static class Program
             sb.Append("POC " + st.PocPrice(0.1).ToString(CultureInfo.InvariantCulture) + " VA " + st.ValPrice(0.1).ToString(CultureInfo.InvariantCulture) + "-" + st.VahPrice(0.1).ToString(CultureInfo.InvariantCulture) + ";");
         }
         return sb.ToString();
+    }
+
+    private static void ZoneBreakTest()
+    {
+        Console.WriteLine("[Stacked imbalance zone break]");
+        OrderFlowEngine e = new OrderFlowEngine(TestSettings());
+        DateTime t = new DateTime(2026, 1, 5, 9, 0, 0);
+        e.OnSessionStart(t.Date, t, 0);
+        e.BeginBar(0, t);
+        for (int k = 0; k < 4; k++) e.ProcessTrade(Pr(t.AddSeconds(k), 2000.0 + 0.1 * k, 10, 1999.9 + 0.1 * k, 2000.0 + 0.1 * k), 0);
+        e.FinalizeBar(0, t.AddMinutes(1), 2000.0, 2000.3, 2000.0, 2000.3, 40);
+        Check(e.Zones.Count == 1 && e.Zones[0].Side == 1 && e.Zones[0].Count == 4 && e.Zones[0].BrokenBar == -1, "stacked buy zone 2000.0-2000.3 detected and intact");
+        e.BeginBar(1, t.AddMinutes(1));
+        e.ProcessTrade(Pr(t.AddMinutes(1).AddSeconds(1), 2000.1, 1, 2000.1, 2000.2), 1);
+        e.FinalizeBar(1, t.AddMinutes(2), 2000.1, 2000.1, 2000.1, 2000.1, 1);
+        Check(e.Zones[0].BrokenBar == -1, "trading inside the zone does not break it");
+        e.BeginBar(2, t.AddMinutes(2));
+        e.ProcessTrade(Pr(t.AddMinutes(2).AddSeconds(1), 1999.8, 1, 1999.8, 1999.9), 2);
+        e.FinalizeBar(2, t.AddMinutes(3), 2000.0, 2000.0, 1999.8, 1999.8, 1);
+        Check(e.Zones[0].BrokenBar == 2, "trading below a buy zone breaks it on that bar");
     }
 
     private static void PerfTest()

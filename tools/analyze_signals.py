@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Out-of-sample statistics for GoldOrderFlowAnalyzer signal logs (stdlib only).
+Out-of-sample statistics for DrTraderOrderFlow signal logs (stdlib only).
 
 Input : outcomes_*.csv written by the indicator (EnableCsvLog = true)
         columns: id,kind,bar_time,horizon_bars,mode,mfe_ticks,mae_ticks,close_ret_ticks

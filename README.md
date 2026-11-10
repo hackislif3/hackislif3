@@ -1,4 +1,4 @@
-# Gold Institutional Order Flow Analyzer — NinjaTrader 8
+# DrTrader Order Flow Suite (Gold) — NinjaTrader 8
 
 اندیکاتور تحلیلی Order Flow برای **COMEX Gold Futures (GC)** و به‌صورت مستقل **MGC**، روی NinjaTrader 8 با دیتافید Rithmic.
 هدف: نشان‌دادن اینکه **در چه قیمت‌هایی حجم واقعی معامله شده، کدام سمت تهاجمی‌تر بوده، قیمت چه واکنشی داده و آیا شواهد کافی وجود دارد** — با اولویت کیفیت داده بر تعداد سیگنال.
@@ -17,10 +17,19 @@
 | Alerts | معامله/Cluster بزرگ، Imbalance، واگرایی، سیگنال، عبور/لمس POC، Absorption، کیفیت داده؛ Cooldown؛ صوتی و تصویری |
 | Validation | لاگ CSV سیگنال/نتیجه/رویداد، `tools/analyze_signals.py` (In/Out-of-sample، bootstrap CI، کالیبراسیون) |
 
+## اندیکاتورها
+| اندیکاتور | کار |
+|---|---|
+| **DrTraderOrderFlow** | پروفایل‌ها، POC/VA، معاملات بزرگ، Absorption، واگرایی، سیگنال، داشبورد، هشدار |
+| **DrTraderFootprint** | فوت‌پرینت مستقل: Bid x Ask / تعداد معاملات / Delta / Volume، چهار حالت رنگ‌آمیزی، تم‌های Dark/Light/Midnight/Custom، Imbalance و Stacked zone تا شکسته‌شدن، POC و VA هر کندل، Unfinished auction، حباب اجراهای تجمیعی (Tape)، جدول آمار کندل‌ها |
+| **DrTraderCumulativeDelta** | پنل CVD کندلی/خطی، Bar Delta، Delta%، واگرایی |
+
+> ارتقا از نسخه‌های قبلی: پوشه‌های قدیمی `AddOns\GoldOrderFlow` و `Indicators\GoldOrderFlow` را از `bin\Custom` حذف کنید و اندیکاتورها را دوباره روی چارت اضافه کنید.
+
 ## ساختار مخزن
 ```
-src/AddOns/GoldOrderFlow/        موتورهای محاسباتی، C# خالص (بدون وابستگی به NinjaTrader)
-src/Indicators/GoldOrderFlow/    GoldOrderFlowAnalyzer (پنل قیمت)، GoldCumulativeDelta (پنل CVD)
+src/AddOns/DrTrader/        موتورهای محاسباتی، C# خالص (بدون وابستگی به NinjaTrader)
+src/Indicators/DrTrader/    DrTraderOrderFlow (پنل قیمت)، DrTraderCumulativeDelta (پنل CVD)
 tests/CoreTests/                 53 تست واحد/یکپارچه + بنچمارک، کامپایل با C# 5
 tests/NtStubs, NtCompileCheck/   type-check اندیکاتورها روی stub های API
 tools/analyze_signals.py         تحلیل آماری خارج از نمونه
@@ -31,10 +40,10 @@ docs/VALIDATION.md               پروتکل اعتبارسنجی
 ```
 
 ## نصب سریع
-1. `src/AddOns/GoldOrderFlow/*.cs` → `Documents\NinjaTrader 8\bin\Custom\AddOns\GoldOrderFlow\`
-2. `src/Indicators/GoldOrderFlow/*.cs` → `Documents\NinjaTrader 8\bin\Custom\Indicators\GoldOrderFlow\`
+1. `src/AddOns/DrTrader/*.cs` → `Documents\NinjaTrader 8\bin\Custom\AddOns\DrTrader\`
+2. `src/Indicators/DrTrader/*.cs` → `Documents\NinjaTrader 8\bin\Custom\Indicators\DrTrader\`
 3. NinjaScript Editor → F5.
-4. چارت GC (قرارداد فعال) با **Tick Replay**، Calculate = OnEachTick (پیش‌فرض)، اضافه‌کردن `GoldOrderFlowAnalyzer` و `GoldCumulativeDelta`.
+4. چارت GC (قرارداد فعال) با **Tick Replay**، Calculate = OnEachTick (پیش‌فرض)، اضافه‌کردن `DrTraderOrderFlow` و `DrTraderCumulativeDelta`.
 
 جزئیات: [docs/STAGES.md](docs/STAGES.md). هیچ DLL یا مجوز اضافی لازم نیست؛ Order Flow+ فقط برای مقایسه اختیاری است.
 
@@ -48,7 +57,7 @@ docs/VALIDATION.md               پروتکل اعتبارسنجی
 
 ## دسترسی از Strategy
 ```csharp
-var gof = GoldOrderFlowAnalyzer();
+var gof = DrTraderOrderFlow();
 double code  = gof.SignalCode[1];   // +1 Strong bull pressure, +2 Potential bull reversal, -1/-2 bearish, 9 conflict, 0 none
 double score = gof.SignalScore[1];
 double dPoc  = gof.DevelopingPoc[1];

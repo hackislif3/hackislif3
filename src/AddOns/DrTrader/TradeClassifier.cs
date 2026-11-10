@@ -2,7 +2,7 @@
 using System;
 using System.Globalization;
 
-namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
+namespace NinjaTrader.NinjaScript.AddOns.DrTrader
 {
     /// <summary>
     /// Classifies each executed print as aggressive buy / aggressive sell.

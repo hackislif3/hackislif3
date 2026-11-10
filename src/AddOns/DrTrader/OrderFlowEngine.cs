@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
+namespace NinjaTrader.NinjaScript.AddOns.DrTrader
 {
     public sealed class EngineSettings
     {
@@ -337,6 +337,14 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
             int zoneStart = Zones.Count;
             Analytics.Analyze(r, f, ToExchange(time), History, ts, Zones);
             if (Zones.Count > 5000) Zones.RemoveRange(0, Zones.Count - 5000);
+            // mark older zones that this bar traded through (checked once per bar, newest first, bounded)
+            for (int i = zoneStart - 1, checkedZones = 0; i >= 0 && checkedZones < 400; i--, checkedZones++)
+            {
+                if (i >= Zones.Count) continue;
+                StackedImbalanceZone z = Zones[i];
+                if (z.BrokenBar >= 0 || z.Bar >= bar) continue;
+                if (z.Side > 0 ? low < (z.LowTick - 0.5) * ts : high > (z.HighTick + 0.5) * ts) z.BrokenBar = bar;
+            }
             for (int i = Math.Min(zoneStart, Zones.Count); i < Zones.Count; i++)
             {
                 StackedImbalanceZone z = Zones[i];

@@ -10,12 +10,12 @@
  NinjaTrader 8 (Rithmic feed)
    │  OnMarketData(Last/Bid/Ask)   OnBarUpdate(BIP0 / BIP1 1-tick)   OnMarketDepth (اختیاری، فقط realtime)
    ▼
- ┌──────────────── لایه NinjaScript (Indicators\GoldOrderFlow) ────────────────┐
- │ GoldOrderFlowAnalyzer.cs  : ورودی داده → Engine ، رندر SharpDX ، هشدار، لاگ   │
- │ GoldCumulativeDelta.cs    : پنل CVD / Bar Delta / Delta% / واگرایی            │
+ ┌──────────────── لایه NinjaScript (Indicators\DrTrader) ────────────────┐
+ │ DrTraderOrderFlow.cs  : ورودی داده → Engine ، رندر SharpDX ، هشدار، لاگ   │
+ │ DrTraderCumulativeDelta.cs    : پنل CVD / Bar Delta / Delta% / واگرایی            │
  └──────────────────────────────────┬───────────────────────────────────────────┘
                                     │ فقط فراخوانی متد (بدون منطق محاسباتی)
- ┌──────────────── لایه موتور (AddOns\GoldOrderFlow) — C# خالص ─────────────────┐
+ ┌──────────────── لایه موتور (AddOns\DrTrader) — C# خالص ─────────────────┐
  │ TradeIntake        بافر prints و نسبت‌دادن دقیق به کندل (بدون Double Counting) │
  │ TradeClassifier    Ask/Bid → Buy/Sell ، قاعده داخل اسپرد، Tick Rule (تخمینی)   │
  │ DataQualityMonitor سهم داده دقیق/تخمینی، gap، ترتیب زمانی، quote معیوب         │

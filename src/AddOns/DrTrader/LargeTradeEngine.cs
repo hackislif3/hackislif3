@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
+namespace NinjaTrader.NinjaScript.AddOns.DrTrader
 {
     public sealed class LargeTradeSettings
     {

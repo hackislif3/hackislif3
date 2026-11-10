@@ -5,10 +5,10 @@
 | مرحله | فایل‌های موتور | تنظیمات فعال |
 |---|---|---|
 | 1. Volume Profile Core | `GofTypes.cs`, `TradeClassifier.cs`, `VolumeProfile.cs`, `SessionClock.cs` | `Enable profiles` |
-| 2. Delta Engine | `DeltaEngine.cs` + اندیکاتور `GoldCumulativeDelta` | پنل CVD |
+| 2. Delta Engine | `DeltaEngine.cs` + اندیکاتور `DrTraderCumulativeDelta` | پنل CVD |
 | 3. Large Trade Engine | `LargeTradeEngine.cs` (+ Imbalance در `DeltaEngine.cs/BarAnalytics`) | `Enable large trades` |
 | 4. Signal Engine | `AbsorptionEngine.cs`, `SignalEngine.cs` | `Enable absorption/divergence/signals` |
-| 5. UI / Alerts | `GoldOrderFlowAnalyzer.cs` (رندر، داشبورد، هشدار) | گروه‌های 12 و 13 |
+| 5. UI / Alerts | `DrTraderOrderFlow.cs` (رندر، داشبورد، هشدار) | گروه‌های 12 و 13 |
 | 6. Testing & Optimization | `tests/`, `tools/analyze_signals.py`, لاگ CSV | گروه 14 |
 
 ---
@@ -18,14 +18,14 @@
 1. NinjaTrader 8 را ببندید (یا NinjaScript Editor را باز نکنید).
 2. کپی فایل‌ها:
    ```
-   src/AddOns/GoldOrderFlow/*.cs      →  Documents\NinjaTrader 8\bin\Custom\AddOns\GoldOrderFlow\
-   src/Indicators/GoldOrderFlow/*.cs  →  Documents\NinjaTrader 8\bin\Custom\Indicators\GoldOrderFlow\
+   src/AddOns/DrTrader/*.cs      →  Documents\NinjaTrader 8\bin\Custom\AddOns\DrTrader\
+   src/Indicators/DrTrader/*.cs  →  Documents\NinjaTrader 8\bin\Custom\Indicators\DrTrader\
    ```
 3. NinjaTrader را باز کنید → New → NinjaScript Editor → یکی از فایل‌ها را باز کنید → **F5 (Compile)**. پیام موفقیت در پایین Editor نمایش داده می‌شود. (Editor بخش `NinjaScript generated code` را در صورت نیاز بازتولید می‌کند.)
 4. چارت GC (قرارداد فعال، مثلاً `GC 02-27`) با Rithmic:
    * Data Series → **Tick Replay = true** (Tools > Options > Market data > «Show Tick Replay» را قبلاً فعال کنید).
    * Trading Hours: قالب ETH پیش‌فرض GC. Days to load: 5–10 (Tick Replay برای روزهای زیاد کند است).
-   * Indicators → `GoldOrderFlowAnalyzer` روی پنل قیمت، `GoldCumulativeDelta` در پنل جدید.
+   * Indicators → `DrTraderOrderFlow` روی پنل قیمت، `DrTraderCumulativeDelta` در پنل جدید.
 5. داشبورد را بررسی کنید: ردیف `Data` باید `Exact` یا `MostlyExact` نشان دهد. اگر `Estimated` است، Tick Replay فعال نیست یا دیتای تاریخی Bid/Ask برای این بازه موجود نیست.
 
 **وابستگی‌ها:** هیچ DLL، کتابخانه یا مجوز اضافی لازم نیست. فقط NinjaTrader 8 و دیتافید با Tick data (Rithmic). Order Flow+ اختیاری است (فقط برای مقایسه در اعتبارسنجی). Level 2 اختیاری است (فقط Replenishment در Realtime).
@@ -46,7 +46,7 @@
 6. مرز هفته: پروفایل هفتگی از سشن یکشنبه عصر شروع شود.
 
 ## مرحله 2 — Delta Engine
-**فعال:** `GoldCumulativeDelta` (Panel mode = CvdCandles, سپس BarDelta و DeltaPercent).
+**فعال:** `DrTraderCumulativeDelta` (Panel mode = CvdCandles, سپس BarDelta و DeltaPercent).
 
 **تست:**
 1. `CVD reset` را Session / TradingDay / Week / Never تغییر دهید؛ در Session، CVD در شروع هر سشن صفر شود.

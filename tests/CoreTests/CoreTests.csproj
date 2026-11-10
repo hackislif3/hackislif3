@@ -10,7 +10,7 @@
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../src/AddOns/GoldOrderFlow/*.cs" />
+    <Compile Include="../../src/AddOns/DrTrader/*.cs" />
     <Compile Include="*.cs" />
   </ItemGroup>
 </Project>

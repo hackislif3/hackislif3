@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
+namespace NinjaTrader.NinjaScript.AddOns.DrTrader
 {
     /// <summary>Executed volume at price for ONE bar, split by aggressor side.</summary>
     public sealed class BarFootprint
@@ -255,6 +255,8 @@ namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
         public long LowTick;
         public long HighTick;
         public int Count;
+        /// <summary>First later bar that traded through the zone (buy zone: low below it, sell zone: high above it); -1 = still intact.</summary>
+        public int BrokenBar = -1;
     }
 
     /// <summary>Diagonal bid/ask imbalance, spikes, exhaustion and ATR. Everything uses data up to the bar only.</summary>

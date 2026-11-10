@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace NinjaTrader.NinjaScript.AddOns.GoldOrderFlow
+namespace NinjaTrader.NinjaScript.AddOns.DrTrader
 {
     /// <summary>Side of the aggressor (the order that crossed the spread and caused the print).</summary>
     public enum AggressorSide { Unknown = 0, Buy = 1, Sell = -1 }
