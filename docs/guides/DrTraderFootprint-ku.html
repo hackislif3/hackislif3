@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="ckb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ڕێبەری DrTrader Footprint</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@500;700&family=Noto+Sans+Arabic:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: one reading column (RTL) with full-width dark "chart plates" that mirror the indicator's Dark theme. */
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --fg: #16191e;
+  --muted: #5b6472;
+  --line: #dde2ea;
+  --accent: #946400;
+  --accent-soft: #fbefd2;
+  --buy: #14855a;
+  --sell: #c93b45;
+  /* chart plate: same in both page themes, like the indicator's Dark theme */
+  --c-bg: #14181e;
+  --c-cell: #1b2028;
+  --c-va: #222a36;
+  --c-grid: #303744;
+  --c-text: #dee4ec;
+  --c-dim: #7c8594;
+  --c-buy: #26a678;
+  --c-sell: #e84855;
+  --c-poc: #f5be3c;
+  --c-tape: #5096ff;
+  --c-unf: #ffa032;
+  --font-display: "Noto Kufi Arabic", "Noto Sans Arabic", Tahoma, sans-serif;
+  --font-body: "Noto Sans Arabic", Tahoma, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1115; --surface: #161a20; --fg: #e7eaef; --muted: #9aa3b1; --line: #2a303a;
+    --accent: #e9b949; --accent-soft: #2e2715; --buy: #3cc28e; --sell: #ef6b74; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1115; --surface: #161a20; --fg: #e7eaef; --muted: #9aa3b1; --line: #2a303a;
+  --accent: #e9b949; --accent-soft: #2e2715; --buy: #3cc28e; --sell: #ef6b74; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.9;
+}
+.page {
+  direction: rtl; max-width: 980px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+  display: flex; flex-direction: column; gap: 56px;
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.5; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; }
+h2 { font-size: clamp(22px, 3.2vw, 28px); font-weight: 700; }
+h3 { font-size: 18px; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+section { display: flex; flex-direction: column; gap: 16px; }
+.kicker { font-family: var(--font-mono); font-size: 13px; letter-spacing: .04em; color: var(--accent); direction: ltr; text-align: right; }
+.lead { font-size: 18px; color: var(--muted); }
+.en { font-family: var(--font-mono); direction: ltr; unicode-bidi: isolate; font-size: .92em; }
+.hero { display: flex; flex-direction: column; gap: 14px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.fact { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 4px 12px; font-size: 14px; }
+.fact b { font-family: var(--font-mono); direction: ltr; unicode-bidi: isolate; }
+
+/* chart plates */
+.plate { background: var(--c-bg); border-radius: 10px; padding: 14px; overflow-x: auto; }
+.plate svg { display: block; direction: ltr; margin: 0 auto; max-width: none; }
+.caption { font-size: 14px; color: var(--muted); }
+
+/* numbered legend */
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.item header { display: flex; align-items: center; gap: 10px; }
+.badge { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--c-poc); color: #1a1405; font-family: var(--font-mono); font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+.swatch { flex: none; width: 34px; height: 20px; border-radius: 3px; background: var(--c-cell); position: relative; overflow: hidden; }
+.item .what { font-size: 15px; }
+.item .use { font-size: 15px; color: var(--muted); }
+.item .use b { color: var(--fg); }
+
+/* cell anatomy */
+.anatomy { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; direction: ltr; max-width: 640px; }
+.cellbig { background: var(--c-cell); border: 1px solid var(--c-grid); border-radius: 6px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-family: var(--font-mono); font-size: 34px; color: var(--c-text); padding: 10px 18px; gap: 14px; }
+.cellbig .x { color: var(--c-dim); font-size: 22px; }
+.side { direction: rtl; font-size: 15px; display: flex; flex-direction: column; gap: 2px; }
+.side b { font-family: var(--font-display); }
+.side.sell b { color: var(--sell); }
+.side.buy b { color: var(--buy); }
+.side.sell { text-align: left; }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: right; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--muted); }
+tr:last-child td { border-bottom: none; }
+td.k { font-family: var(--font-mono); direction: ltr; white-space: nowrap; font-weight: 700; color: var(--accent); }
+
+.patterns { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.pattern { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.pattern .plate { border-radius: 0; }
+.pattern .txt { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.pattern .txt .read { color: var(--muted); }
+
+.note { border-inline-start: 4px solid var(--accent); background: var(--accent-soft); padding: 14px 18px; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; }
+ol.steps { margin: 0; padding-inline-start: 22px; display: flex; flex-direction: column; gap: 6px; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+</head>
+<body style="margin:0">
+<div class="page">
+
+  <header class="hero">
+    <div class="kicker">DrTrader Footprint · NinjaTrader 8 · COMEX Gold (GC)</div>
+    <h1>ڕێبەری فووتپرینت</h1>
+    <p class="lead">فووتپرینت ناوەوەی هەر مۆمێک (کەندڵ) نیشان دەدات: لە هەر نرخێکدا چەند گرێبەست مامەڵەی پێکراوە و کام لایەن هێرشبەرتر بووە، کڕیار یان فرۆشیار.</p>
+    <div class="facts">
+      <span class="fact">تیکی زێڕ: <b>$0.10</b></span>
+      <span class="fact">بەهای هەر تیک: <b>$10</b></span>
+      <span class="fact">Imbalance: <b>3 : 1</b></span>
+      <span class="fact">Value Area: <b>70%</b></span>
+    </div>
+  </header>
+
+  <section aria-labelledby="s-what">
+    <h2 id="s-what">فووتپرینت چییە؟</h2>
+    <p>مۆمی ئاسایی تەنها چوار نرخ نیشان دەدات: کردنەوە، بەرزترین، نزمترین و داخستن. فووتپرینت مۆمەکە دەکاتەوە: بۆ هەر ئاستێکی نرخ، قەبارەی ئەو مامەڵانەی تێیدا کراون دەنووسێت و دابەشیان دەکات بۆ دوو بەش، فرۆشتنی هێرشبەر و کڕینی هێرشبەر.</p>
+    <p><b>کڕینی هێرشبەر</b> واتە کڕیارێک کە چاوەڕێی نرخی باشتر نەکردووە و بە نرخی <span class="en">Ask</span> کڕیویەتی. <b>فرۆشتنی هێرشبەر</b> واتە فرۆشیارێک کە بە نرخی <span class="en">Bid</span> فرۆشتوویەتی. ئەم جیاکردنەوەیە لە داتای ڕاستەقینەی مامەڵەکانەوە دێت، بۆیە دەبێت <span class="en">Tick Replay</span> چالاک بێت.</p>
+    <div class="plate" role="img" aria-label="نموونەی دوو مۆمی فووتپرینت بە ژمارەی هێماکان">
+      <svg id="main"></svg>
+    </div>
+    <p class="caption">نموونەیەکی دوو مۆمی زێڕ، هەر ڕیزێک ٥ تیکە (<span class="en">$0.50</span>). ژمارە زەردەکان بەشەکانی خوارەوە نیشان دەدەن.</p>
+  </section>
+
+  <section aria-labelledby="s-cell">
+    <h2 id="s-cell">خوێندنەوەی خانەیەک</h2>
+    <p>هەر ڕیزێک یەک خانەیە بە شێوەی <span class="en">فرۆشتن × کڕین</span>. ژمارەی لای چەپ و لای ڕاستی نیشانەی <span class="en">x</span> هەمیشە بەم شێوەیەن:</p>
+    <div class="anatomy">
+      <div class="side sell"><b>فرۆشتنی هێرشبەر</b><span>لە نرخی <span class="en">Bid</span></span></div>
+      <div class="cellbig"><span>24</span><span class="x">x</span><span>87</span></div>
+      <div class="side buy"><b>کڕینی هێرشبەر</b><span>لە نرخی <span class="en">Ask</span></span></div>
+    </div>
+    <p>لەم نموونەیەدا لەو نرخەدا ٢٤ گرێبەست فرۆشراوە و ٨٧ گرێبەست کڕدراوە. واتە لێرەدا کڕیاران زۆر هێرشبەرتر بوون.</p>
+    <div class="note">
+      <b>کۆکردنەوەی ڕیزەکان</b>
+      <p>لە چارتی ١٥ خولەکیدا هەر مۆمێکی زێڕ ٥٠ تا ٨٠ ئاستی نرخی هەیە. بۆ ئەوەی ژمارەکان بخوێنرێنەوە، ئیندیکاتۆرەکە خۆی چەند تیک لە یەک ڕیزدا کۆدەکاتەوە (بۆ نموونە ٥ تیک). کاتێک زووم دەکەیت، ڕیزەکان وردتر دەبنەوە. ئەمە لە ڕێکخستنی <span class="en">Ticks per row</span> دەگۆڕدرێت (<span class="en">0</span> = خۆکار).</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-legend">
+    <h2 id="s-legend">هێماکان و واتاکانیان</h2>
+    <p>ژمارەی هەر کارتێک هەمان ژمارەی سەر وێنەکەی سەرەوەیە.</p>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section aria-labelledby="s-diag">
+    <h2 id="s-diag">Imbalance چۆن دەژمێردرێت؟</h2>
+    <p>بەراوردکردن <b>خواروخێچە (Diagonal)</b>، نەک ئاسۆیی. کڕیاری هێرشبەر نرخی <span class="en">Ask</span> دەخوات کە یەک ئاست لە سەرووی <span class="en">Bid</span> ە، بۆیە کڕین لە هەر ڕیزێکدا لەگەڵ فرۆشتنی ڕیزی خوارەوەی بەراورد دەکرێت، و فرۆشتن لەگەڵ کڕینی ڕیزی سەرەوەی.</p>
+    <div class="plate" role="img" aria-label="وێنەی بەراوردی خواروخێچ">
+      <svg id="diag"></svg>
+    </div>
+    <p class="caption">نموونەی سەرەوە: <span class="en">66 ≥ 3 × 15 = 45</span> ← Imbalance ی کڕین. نموونەی خوارەوە: <span class="en">62 ≥ 3 × 14 = 42</span> ← Imbalance ی فرۆشتن. ڕیزی لێوار (سەرەوە و خوارەوەی مۆم) هاوبەشی خواروخێچی نییە، بۆیە Imbalance ی بۆ ناژمێردرێت.</p>
+  </section>
+
+  <section aria-labelledby="s-stats">
+    <h2 id="s-stats">خشتەی ئاماری خوارەوە</h2>
+    <p>لە خوارەوەی چارتەکە، بۆ هەر مۆمێک ستوونێک هەیە. هەر ڕیزێکی خشتەکە ژمارەیەکی جیاواز نیشان دەدات:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>ڕیز</th><th>واتا</th><th>بەکارهێنان</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Vol</td><td>کۆی قەبارەی مۆمەکە</td><td>شینی تۆختر = قەبارەی زیاتر. مۆمە قەبارە زۆرەکان بە خێرایی دەدۆزیتەوە.</td></tr>
+          <tr><td class="k">Delta</td><td>کڕینی هێرشبەر لێدەرچووی فرۆشتنی هێرشبەر</td><td>سەوز = کڕیار زاڵ بووە، سوور = فرۆشیار زاڵ بووە.</td></tr>
+          <tr><td class="k">Delta%</td><td>Delta دابەش بە قەبارە</td><td>هێزی ڕێژەیی پاڵەپەستۆ. <span class="en">+20%</span> بەهێزترە لە <span class="en">+5%</span>.</td></tr>
+          <tr><td class="k">MaxD / MinD</td><td>بەرزترین و نزمترین Delta لە ماوەی مۆمەکەدا</td><td>دەریدەخات کڕیار یان فرۆشیار لە ناوەڕاستی مۆمەکەدا چەندە پێشکەوتووە و پاشان گەڕاوەتەوە. MaxD ی زۆر بەڵام Delta ی کۆتایی کەم = کڕینەکان هەڵمژراون.</td></tr>
+          <tr><td class="k">Trades</td><td>ژمارەی مامەڵەکانی فرۆشتن × کڕین</td><td>ئایا پاڵەپەستۆکە لە چەند مامەڵەیەکی گەورەوە هاتووە یان لە زۆر مامەڵەی بچووک. ئەمە ژمارەی مامەڵەیە، نەک ژمارەی فەرمان (<span class="en">order</span>).</td></tr>
+          <tr><td class="k">CVD</td><td>Delta ی کەڵەکەبوو لە سەرەتای دانیشتنەوە</td><td>ڕەوتی گشتیی پاڵەپەستۆی کڕین و فرۆشتن لە ماوەی ڕۆژدا.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-pat">
+    <h2 id="s-pat">چوار شێوازی باو</h2>
+    <p>ئەم شێوازانە بەڵگەی ڕەفتاری کڕیار و فرۆشیارن. هیچ کامیان بە تەنها ئاماژەی کڕین یان فرۆشتن نییە.</p>
+    <div class="patterns">
+      <article class="pattern">
+        <div class="plate" role="img" aria-label="شێوازی بەردەوامبوونی ڕەوت"><svg id="p1"></svg></div>
+        <div class="txt"><h3>بەردەوامبوونی ڕەوت</h3>
+          <p>چەند Imbalance ی کڕینی لە سەر یەک (ناوچەی Stacked ی سەوز)، Delta ی پۆزەتیڤ و POC لە نیوەی سەرەوەی مۆمەکە.</p>
+          <p class="read">خوێندنەوە: کڕیاران کۆنترۆڵیان بە دەستەوەیە و فرۆشیاران ناتوانن ڕایانبگرن.</p></div>
+      </article>
+      <article class="pattern">
+        <div class="plate" role="img" aria-label="شێوازی هەڵمژین"><svg id="p2"></svg></div>
+        <div class="txt"><h3>هەڵمژین (Absorption)</h3>
+          <p>بازنەی گەورەی فرۆشتن و ژمارەی فرۆشتنی زۆر لە بنی مۆمەکە، بەڵام نرخ دانابەزێت و مۆمەکە نزیک بەرزترین خاڵی خۆی دادەخرێت. مۆمی دواتر بەرز دەبێتەوە.</p>
+          <p class="read">خوێندنەوە: فرۆشتنەکان لەلایەن کڕیارانی چاوەڕوانەوە (Limit) هەڵمژراون.</p></div>
+      </article>
+      <article class="pattern">
+        <div class="plate" role="img" aria-label="شێوازی ماندووبوون"><svg id="p3"></svg></div>
+        <div class="txt"><h3>ماندووبوون (Exhaustion)</h3>
+          <p>نرخ لوتکەیەکی نوێ دروست دەکات، بەڵام ژمارەی کڕین لە لوتکەدا زۆر بچووکە (<span class="en">3 x 0</span>) و هێڵی پرتەقاڵی نییە. مۆمی دواتر بە Imbalance ی فرۆشتن دادەبەزێت.</p>
+          <p class="read">خوێندنەوە: کڕیاری نوێ نەماوە بۆ بەرزکردنەوەی نرخ.</p></div>
+      </article>
+      <article class="pattern">
+        <div class="plate" role="img" aria-label="شێوازی تاقیکردنەوەی ناوچە"><svg id="p4"></svg></div>
+        <div class="txt"><h3>تاقیکردنەوەی ناوچە</h3>
+          <p>نرخ دەگەڕێتەوە بۆ ناوچەیەکی Stacked ی پێشوو، دەچێتە ناوی بەڵام نایشکێنێت و مۆمەکە بە سێبەرێکی درێژی خوارەوە بەرز دادەخرێت.</p>
+          <p class="read">خوێندنەوە: ناوچەکە وەک پشتگیری کاری کردووە. خاڵی بڕیاردانە، بە مەرجی مۆمی پشتڕاستکردنەوە.</p></div>
+      </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-set">
+    <h2 id="s-set">ڕێکخستنەکان</h2>
+    <p>لە پەنجەرەی <span class="en">Indicators</span> (<span class="en">Ctrl+I</span>)، <span class="en">DrTraderFootprint</span> هەڵبژێرە. گرووپەکان بەم شێوەیەن:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>گرووپ</th><th>چی تێدایە</th></tr></thead>
+        <tbody>
+          <tr><td class="k">01. Data</td><td>سەرچاوەی داتا (<span class="en">Auto</span> = Tick Replay ئەگەر چالاک بێت). ژمارەی ئەو مۆمانەی فووتپرینتیان بۆ دەکێشرێت.</td></tr>
+          <tr><td class="k">02. Footprint</td><td>ناوەڕۆکی خانە: <span class="en">BidAsk</span> (گرێبەست)، <span class="en">TradeCount</span> (ژمارەی مامەڵە)، <span class="en">Delta</span>، <span class="en">Volume</span>. ڕەنگکردن: <span class="en">ImbalanceOnly</span>، <span class="en">DeltaHeat</span>، <span class="en">VolumeHeat</span>، <span class="en">ProfileBars</span>. پانیی ستوون، هێڵی مۆم، POC، Value Area، مزایدەی تەواونەکراو.</td></tr>
+          <tr><td class="k">03. Theme</td><td>ڕووکار: <span class="en">Dark</span>، <span class="en">Light</span>، <span class="en">Midnight</span> یان <span class="en">Custom</span> بە ڕەنگی دڵخوازی خۆت.</td></tr>
+          <tr><td class="k">04. Imbalance</td><td>ڕێژە (<span class="en">3</span> = ٣٠٠٪)، کەمترین قەبارە، ژمارەی Stacked، درێژکردنەوەی ناوچەکان تا شکان.</td></tr>
+          <tr><td class="k">05. Bar Statistics</td><td>پیشاندان یان شاردنەوەی خشتەی خوارەوە و هەر ڕیزێکی.</td></tr>
+          <tr><td class="k">06. Tape</td><td>بازنەی جێبەجێکردنە گەورەکان: پەنجەرەی کۆکردنەوە بە میلی چرکە و سنووری قەبارە.</td></tr>
+          <tr><td class="k">07. Rows &amp; Text</td><td>تیک بۆ هەر ڕیزێک (<span class="en">0</span> = خۆکار)، بەرزیی ئامانجی ڕیز، قەبارەی فۆنت.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-start">
+    <h2 id="s-start">دەستپێکردن لە چارتدا</h2>
+    <ol class="steps">
+      <li>چارتی <span class="en">GC</span> (گرێبەستی چالاک) بە <span class="en">Tick Replay</span>ی چالاک بکەرەوە. چارتی <span class="en">5 Minute</span> بۆ فێربوون باشترە.</li>
+      <li><span class="en">DrTraderFootprint</span> زیاد بکە و ڕووکاری <span class="en">Dark</span> هەڵبژێرە. ڕەنگی پاشبنەمای چارتەکەش لە <span class="en">Chart Properties</span> تاریک بکە.</li>
+      <li>بۆ پانکردنەوەی مۆمەکان، تەوەری کات (خوارەوەی چارت) بەرەو ڕاست ڕابکێشە.</li>
+      <li>بۆ بەرزکردنەوەی ڕیزەکان، تەوەری نرخ (لای ڕاست) بەرەو خوارەوە ڕابکێشە.</li>
+      <li>ئەگەر ژمارەکان دەرناکەون، <span class="en">Target row height</span> زیاد بکە یان <span class="en">Ticks per row</span> بکە بە <span class="en">5</span>.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="s-warn">
+    <h2 id="s-warn">ئاگاداری</h2>
+    <div class="note">
+      <p>هیچ کام لەم هێمایانە بە تەنها ئاماژەی کڕین یان فرۆشتن نین. تەنها <b>بەڵگەن لەسەر ڕەفتاری کڕیار و فرۆشیار</b> و دەبێت لەگەڵ <b>شوێنی نرخ</b> (POC و VAH/VAL ی ڕۆژانە، ئاستە گرنگەکان) و <b>پشتڕاستکردنەوەی جووڵەی نرخ</b> تێکەڵ بکرێن.</p>
+      <p>ئەگەر داتاکە دواکەوتووە (<span class="en">Delayed</span>) یان <span class="en">Tick Replay</span> چالاک نییە، دابەشکردنی کڕین و فرۆشتن خەمڵاندنە و ورد نییە. بۆ مامەڵەی ڕاستەقینە پەیوەندی بە داتای ڕاستەوخۆ (بۆ نموونە <span class="en">Rithmic</span>) پێویستە.</p>
+    </div>
+  </section>
+
+  <footer>DrTrader Footprint · ڕێبەری فێرکاری بۆ قوتابیان · ژمارەکانی ناو وێنەکان نموونەن و داتای بازاڕی ڕاستەقینە نین.</footer>
+</div>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  var C = {
+    bg: 'var(--c-bg)', cell: 'var(--c-cell)', va: 'var(--c-va)', grid: 'var(--c-grid)', text: 'var(--c-text)', dim: 'var(--c-dim)',
+    buy: 'var(--c-buy)', sell: 'var(--c-sell)', poc: 'var(--c-poc)', tape: 'var(--c-tape)', unf: 'var(--c-unf)'
+  };
+  function el(tag, attrs, parent, text) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  // ---- footprint rules (same as the indicator): POC, 70% value area, 3:1 diagonal imbalance, min volume 5
+  function analyze(bar) {
+    var rows = bar.rows; // top -> bottom: [price, sell, buy]
+    var n = rows.length, tot = rows.map(function (r) { return r[1] + r[2]; });
+    var poc = 0;
+    for (var i = 1; i < n; i++) if (tot[i] > tot[poc]) poc = i;
+    var sum = tot.reduce(function (a, b) { return a + b; }, 0), target = Math.ceil(sum * 0.7);
+    var hi = poc, lo = poc, acc = tot[poc]; // hi = upper index (smaller), lo = lower index (larger)
+    while (acc < target && (hi > 0 || lo < n - 1)) {
+      var up = hi > 0 ? tot[hi - 1] : -1, dn = lo < n - 1 ? tot[lo + 1] : -1;
+      if (up >= dn) { hi--; acc += up; } else { lo++; acc += dn; }
+    }
+    var buyImb = [], sellImb = [];
+    for (i = 0; i < n; i++) {
+      var below = i < n - 1 ? rows[i + 1] : null, above = i > 0 ? rows[i - 1] : null;
+      buyImb.push(!!below && rows[i][2] >= 5 && rows[i][2] >= 3 * below[1]);
+      sellImb.push(!!above && rows[i][1] >= 5 && rows[i][1] >= 3 * above[2]);
+    }
+    var sell = rows.reduce(function (a, r) { return a + r[1]; }, 0), buy = rows.reduce(function (a, r) { return a + r[2]; }, 0);
+    return { poc: poc, vaTop: hi, vaBot: lo, buyImb: buyImb, sellImb: sellImb, vol: sell + buy, delta: buy - sell,
+             unfHigh: rows[0][1] > 0 && rows[0][2] > 0, unfLow: rows[n - 1][1] > 0 && rows[n - 1][2] > 0 };
+  }
+  function stacked(flags) { // runs of >= 3 consecutive true flags -> [[startIdx, endIdx]]
+    var out = [], s = -1;
+    for (var i = 0; i <= flags.length; i++) {
+      if (i < flags.length && flags[i]) { if (s < 0) s = i; }
+      else { if (s >= 0 && i - s >= 3) out.push([s, i - 1]); s = -1; }
+    }
+    return out;
+  }
+
+  function draw(svg, cfg) {
+    var step = cfg.step || 0.5, rowPx = cfg.rowPx || 26, colW = cfg.colW || 112, gap = cfg.gap || 40;
+    var font = cfg.font || 13, statsOn = !!cfg.stats, labelW = statsOn ? 58 : 8, axisW = 64, padT = cfg.padT || 18;
+    var maxP = -1e9, minP = 1e9;
+    cfg.bars.forEach(function (b) { b.rows.forEach(function (r) { maxP = Math.max(maxP, r[0]); minP = Math.min(minP, r[0]); }); });
+    var nRows = Math.round((maxP - minP) / step) + 1;
+    var extra = cfg.extraRight || 0;
+    var W = labelW + cfg.bars.length * colW + (cfg.bars.length - 1) * gap + extra + axisW + 10;
+    var statRows = ['Vol', 'Delta', 'Delta%', 'MaxD', 'MinD', 'Trades', 'CVD'];
+    var statH = statsOn ? statRows.length * 20 + 14 : 0;
+    var H = padT + nRows * rowPx + 18 + statH + (cfg.padB || 0);
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('width', W); svg.setAttribute('height', H);
+    el('rect', { x: 0, y: 0, width: W, height: H, fill: C.bg }, svg);
+    var yOf = function (price) { return padT + (maxP + step - price) / step * rowPx; }; // exact price -> y
+    var xOf = function (i) { return labelW + i * (colW + gap); };
+    var plotRight = W - axisW - 4;
+
+    // grid + price axis
+    for (var k = 0; k < nRows; k++) {
+      var p = maxP - k * step, yy = yOf(p + step);
+      el('line', { x1: labelW, x2: plotRight, y1: yy, y2: yy, stroke: C.grid, 'stroke-width': 0.5, 'stroke-dasharray': '2 4' }, svg);
+      el('text', { x: plotRight + 8, y: yy + rowPx / 2 + 4, fill: C.dim, 'font-family': 'JetBrains Mono, Consolas, monospace', 'font-size': 11 }, svg, p.toFixed(1));
+    }
+    var info = cfg.bars.map(analyze);
+
+    // stacked zones (drawn under the bars)
+    cfg.bars.forEach(function (b, i) {
+      var a = info[i];
+      [[stacked(a.buyImb), C.buy], [stacked(a.sellImb), C.sell]].forEach(function (pair) {
+        pair[0].forEach(function (z) {
+          var top = yOf(b.rows[z[0]][0] + step), bot = yOf(b.rows[z[1]][0]);
+          var x0 = xOf(i) + colW, endBar = b.zoneEnd !== undefined ? b.zoneEnd : null;
+          var x1 = endBar === null ? plotRight : xOf(endBar) + colW / 2;
+          var broken = endBar !== null;
+          el('rect', { x: x0, y: top, width: Math.max(4, x1 - x0), height: bot - top, fill: pair[1], 'fill-opacity': broken ? 0.07 : 0.17 }, svg);
+          el('line', { x1: x0, x2: x1, y1: top, y2: top, stroke: pair[1], 'stroke-opacity': 0.75 }, svg);
+          el('line', { x1: x0, x2: x1, y1: bot, y2: bot, stroke: pair[1], 'stroke-opacity': 0.75 }, svg);
+          b._zone = { x0: x0, x1: x1, top: top, bot: bot };
+        });
+      });
+    });
+
+    cfg.bars.forEach(function (b, i) {
+      var a = info[i], x = xOf(i), strip = 5, cx = x + strip + 2, cw = colW - strip - 2, mid = cx + cw / 2;
+      var top = yOf(b.rows[0][0] + step), bot = yOf(b.rows[b.rows.length - 1][0]);
+      el('rect', { x: x, y: top, width: colW, height: bot - top, fill: C.cell }, svg);
+      // candle strip
+      var col = b.c >= b.o ? C.buy : C.sell;
+      el('line', { x1: x + strip / 2, x2: x + strip / 2, y1: yOf(b.h), y2: yOf(b.l), stroke: col, 'stroke-width': 1 }, svg);
+      el('rect', { x: x, y: Math.min(yOf(b.o), yOf(b.c)), width: strip, height: Math.max(1, Math.abs(yOf(b.c) - yOf(b.o))), fill: col }, svg);
+      b.rows.forEach(function (r, j) {
+        var y = yOf(r[0] + step), h = rowPx - 1;
+        if (j >= a.vaTop && j <= a.vaBot) el('rect', { x: cx, y: y, width: cw, height: h, fill: C.va }, svg);
+        if (a.sellImb[j]) el('rect', { x: cx, y: y, width: cw / 2, height: h, fill: C.sell, 'fill-opacity': 0.75 }, svg);
+        if (a.buyImb[j]) el('rect', { x: mid, y: y, width: cw / 2, height: h, fill: C.buy, 'fill-opacity': 0.75 }, svg);
+        var isPoc = j === a.poc, tc = isPoc ? C.poc : C.text;
+        if (isPoc) el('rect', { x: cx + 0.5, y: y + 0.5, width: cw - 1, height: h - 1, fill: 'none', stroke: C.poc, 'stroke-width': 1.6 }, svg);
+        var ty = y + rowPx / 2 + font * 0.36, ff = 'JetBrains Mono, Consolas, monospace', fw = isPoc ? 700 : 400;
+        el('text', { x: mid - 7, y: ty, 'text-anchor': 'end', fill: tc, 'font-family': ff, 'font-size': font, 'font-weight': fw }, svg, r[1]);
+        el('text', { x: mid, y: ty, 'text-anchor': 'middle', fill: C.dim, 'font-family': ff, 'font-size': font - 2 }, svg, 'x');
+        el('text', { x: mid + 7, y: ty, 'text-anchor': 'start', fill: tc, 'font-family': ff, 'font-size': font, 'font-weight': fw }, svg, r[2]);
+      });
+      el('rect', { x: cx, y: top, width: cw, height: bot - top, fill: 'none', stroke: C.grid }, svg);
+      if (a.unfHigh) el('line', { x1: cx, x2: cx + cw, y1: top - 3, y2: top - 3, stroke: C.unf, 'stroke-width': 2.5 }, svg);
+      if (a.unfLow) el('line', { x1: cx, x2: cx + cw, y1: bot + 3, y2: bot + 3, stroke: C.unf, 'stroke-width': 2.5 }, svg);
+      (b.bubbles || []).forEach(function (bb) {
+        var r = Math.min(17, 6 + Math.sqrt(bb.v) * 1.3), bx = mid + (bb.side > 0 ? cw * 0.27 : -cw * 0.27), by = yOf(bb.p + step) + rowPx / 2;
+        el('circle', { cx: bx, cy: by, r: r, fill: bb.side > 0 ? C.buy : C.sell, 'fill-opacity': 0.5, stroke: C.tape, 'stroke-width': 1.5 }, svg);
+        if (r >= 11) el('text', { x: bx, y: by + 4, 'text-anchor': 'middle', fill: C.text, 'font-family': 'JetBrains Mono, Consolas, monospace', 'font-size': 10, 'font-weight': 700 }, svg, bb.v);
+        bb._x = bx; bb._y = by; bb._r = r;
+      });
+      b._geo = { x: x, cx: cx, cw: cw, mid: mid, top: top, bot: bot, info: a };
+      // statistics table
+      if (statsOn) {
+        var sy = padT + nRows * rowPx + 18, s = b.stats;
+        var vals = [String(a.vol), (a.delta > 0 ? '+' : '') + a.delta, Math.round(100 * a.delta / a.vol) + '%', '+' + s.maxD, String(s.minD), s.trades, (s.cvd > 0 ? '+' : '') + s.cvd];
+        var colors = [C.tape, a.delta >= 0 ? C.buy : C.sell, a.delta >= 0 ? C.buy : C.sell, C.buy, C.sell, C.grid, s.cvd >= 0 ? C.buy : C.sell];
+        for (var q = 0; q < statRows.length; q++) {
+          el('rect', { x: x, y: sy + q * 20 + 1, width: colW, height: 18, fill: colors[q], 'fill-opacity': q === 5 ? 0.6 : 0.45 }, svg);
+          el('text', { x: x + colW / 2, y: sy + q * 20 + 14, 'text-anchor': 'middle', fill: C.text, 'font-family': 'JetBrains Mono, Consolas, monospace', 'font-size': 11 }, svg, vals[q]);
+        }
+        b._statsY = sy;
+      }
+    });
+    if (statsOn) {
+      var sy0 = padT + nRows * rowPx + 18;
+      statRows.forEach(function (nm, q) {
+        el('text', { x: 6, y: sy0 + q * 20 + 14, fill: C.dim, 'font-family': 'JetBrains Mono, Consolas, monospace', 'font-size': 11 }, svg, nm);
+      });
+    }
+    // callouts
+    (cfg.callouts || []).forEach(function (co) {
+      var t = co.target(cfg.bars, yOf, step, rowPx), bx = t[0] + co.dx, by = t[1] + co.dy;
+      el('line', { x1: t[0], y1: t[1], x2: bx, y2: by, stroke: C.poc, 'stroke-width': 1.2 }, svg);
+      el('circle', { cx: t[0], cy: t[1], r: 2.5, fill: C.poc }, svg);
+      el('circle', { cx: bx, cy: by, r: 12, fill: C.poc }, svg);
+      el('text', { x: bx, y: by + 4.5, 'text-anchor': 'middle', fill: '#1a1405', 'font-family': 'JetBrains Mono, Consolas, monospace', 'font-size': 13, 'font-weight': 700 }, svg, co.n);
+    });
+  }
+
+  // ---------------- main example (GC, 5-tick rows)
+  var A = { rows: [[4039.5, 12, 18], [4039.0, 20, 41], [4038.5, 18, 66], [4038.0, 15, 58], [4037.5, 17, 55], [4037.0, 16, 34], [4036.5, 22, 19], [4036.0, 9, 0]],
+            o: 4036.2, h: 4039.9, l: 4036.0, c: 4039.3, bubbles: [{ p: 4038.0, side: 1, v: 46 }], zoneEnd: 1,
+            stats: { maxD: 170, minD: -12, trades: '61x118', cvd: 162 } };
+  var B = { rows: [[4040.0, 26, 9], [4039.5, 48, 14], [4039.0, 62, 15], [4038.5, 55, 18], [4038.0, 40, 31], [4037.5, 71, 66], [4037.0, 20, 25]],
+            o: 4039.3, h: 4040.4, l: 4037.0, c: 4037.8, bubbles: [{ p: 4037.5, side: -1, v: 52 }],
+            stats: { maxD: 20, minD: -160, trades: '140x77', cvd: 18 } };
+  function cell(barIdx, row, part) {
+    return function (bars, yOf, step, rowPx) {
+      var g = bars[barIdx]._geo, p = bars[barIdx].rows[row][0], y = yOf(p + step) + rowPx / 2;
+      if (part === 'sell') return [g.cx + g.cw * 0.2, y];
+      if (part === 'buy') return [g.cx + g.cw * 0.8, y];
+      if (part === 'right') return [g.cx + g.cw, y];
+      return [g.mid, y];
+    };
+  }
+  draw(document.getElementById('main'), {
+    bars: [A, B], rowPx: 30, colW: 128, gap: 64, font: 14, stats: true, extraRight: 120, padT: 30,
+    callouts: [
+      { n: 1, target: cell(0, 1, 'mid'), dx: -10, dy: -44 },
+      { n: 2, target: cell(0, 2, 'right'), dx: 26, dy: -26 },
+      { n: 3, target: function (bars, yOf, step, rowPx) { var g = bars[0]._geo; return [g.cx + 3, yOf(4037.0) - 4]; }, dx: -60, dy: 0 },
+      { n: 4, target: cell(0, 3, 'buy'), dx: 44, dy: 6 },
+      { n: 5, target: cell(1, 2, 'sell'), dx: -40, dy: -10 },
+      { n: 6, target: function (bars) { var z = bars[1]._zone; return [z.x1 - 40, (z.top + z.bot) / 2]; }, dx: 0, dy: -64 },
+      { n: 7, target: function (bars) { var bb = bars[1].bubbles[0]; return [bb._x - bb._r, bb._y]; }, dx: -34, dy: 26 },
+      { n: 8, target: function (bars) { var g = bars[1]._geo; return [g.cx + g.cw * 0.7, g.top - 3]; }, dx: 26, dy: -16 },
+      { n: 9, target: function (bars, yOf) { var g = bars[0]._geo; return [g.x + 2, yOf(4037.4)]; }, dx: -26, dy: 30 },
+      { n: 10, target: function (bars) { return [bars[1]._geo.x + 128, bars[1]._statsY + 30]; }, dx: 40, dy: 0 }
+    ]
+  });
+
+  // ---------------- legend
+  var legend = [
+    { n: 1, t: 'خانە: فرۆشتن × کڕین', sw: 'cell', what: 'ژمارەی چەپ قەبارەی فرۆشتنی هێرشبەرە لە Bid، ژمارەی ڕاست قەبارەی کڕینی هێرشبەرە لە Ask.',
+      use: '<b>بەکارهێنان:</b> ببینە لە هەر نرخێکدا کام لایەن پەلەی زیاتری بووە بۆ مامەڵەکردن.' },
+    { n: 2, t: 'چوارگۆشەی زەرد: POC ی مۆم', sw: 'poc', what: 'ئەو نرخەیە کە زۆرترین قەبارەی ئەم مۆمەی تێدا مامەڵە کراوە. ژمارەکانی ناوی بە زەرد و ئەستوور دەنووسرێن.',
+      use: '<b>بەکارهێنان:</b> ئەو شوێنەیە کە بازاڕ زۆرترین ڕێککەوتنی تێدا بووە. ئەگەر POC لە لێواری مۆمەکەدا بێت (بۆ نموونە لە لوتکەی مۆمێکی دابەزیو)، قەبارەیەکی زۆر لەوێ مامەڵە کراوە و لەوانەیە هەڵمژین یان گیرخواردن ڕوویدابێت.' },
+    { n: 3, t: 'ڕیزە ڕووناکترەکان: Value Area', sw: 'va', what: 'ئەو ناوچەیەیە کە ٧٠٪ ی قەبارەی مۆمەکەی تێدا مامەڵە کراوە.',
+      use: '<b>بەکارهێنان:</b> جەستەی ڕاستەقینەی مامەڵەکانی مۆمەکەیە. بەشەکانی دەرەوەی ئەم ناوچەیە قەبارەیان کەمە.' },
+    { n: 4, t: 'نیوەی ڕاستی سەوز: Imbalance ی کڕین', sw: 'buy', what: 'کڕین لەم ڕیزەدا لانیکەم ٣ هێندەی فرۆشتنی ڕیزی خوارەوەیەتی (بەراوردی خواروخێچ).',
+      use: '<b>بەکارهێنان:</b> کڕیاران بە هێزەوە نرخیان بەرز کردۆتەوە.' },
+    { n: 5, t: 'نیوەی چەپی سوور: Imbalance ی فرۆشتن', sw: 'sell', what: 'فرۆشتن لەم ڕیزەدا لانیکەم ٣ هێندەی کڕینی ڕیزی سەرەوەیەتی.',
+      use: '<b>بەکارهێنان:</b> فرۆشیاران بە هێزەوە نرخیان دابەزاندووە.' },
+    { n: 6, t: 'پشتێنەی ئاسۆیی: Stacked Imbalance', sw: 'zone', what: 'لانیکەم ٣ Imbalance ی هاوئاراستە لە سەر یەک. پشتێنەکە بەرەو ڕاست درێژ دەبێتەوە تا نرخ پێیدا تێدەپەڕێت، دوای شکان کاڵ دەبێتەوە.',
+      use: '<b>بەکارهێنان:</b> ناوچەی سەوز زۆرجار وەک پشتگیری و ناوچەی سوور وەک بەرگری سەیر دەکرێت. گەڕانەوەی نرخ بۆ ئەم ناوچانە خاڵی بڕیاردانە.' },
+    { n: 7, t: 'بازنەی لێوار شین: جێبەجێکردنی گەورە (Tape)', sw: 'tape', what: 'چەند مامەڵەی هاوئاراستە کە لە چەند میلی چرکەیەکدا یەک لە دوای یەک کراون و کۆکەیان لە سنووری مامەڵەی گەورە زیاترە. سوور و لای چەپ فرۆشتنە، سەوز و لای ڕاست کڕینە. بازنەی گەورەتر = قەبارەی زیاتر.',
+      use: '<b>بەکارهێنان:</b> چالاکیی گەورە لەو نرخەدا. ئەگەر دوای ئەوە نرخ بەردەوام نەبوو، ئەگەری هەڵمژین هەیە. ئەمە ناسەلمێنێت کە هەموویان یەک فەرمان بوون.' },
+    { n: 8, t: 'هێڵی پرتەقاڵی: مزایدەی تەواونەکراو', sw: 'unf', what: 'لە بەرزترین یان نزمترین ڕیزی مۆمەکەدا هەم کڕین و هەم فرۆشتن کراوە، نەک تەنها یەک لایەن.',
+      use: '<b>بەکارهێنان:</b> بازاڕ زۆرجار دەگەڕێتەوە بۆ ئەم ئاستانە تا مزایدەکە تەواو بکات. لوتکە یان بنێک کە ئەم هێڵەی نییە تەواوبووە و پتەوترە.' },
+    { n: 9, t: 'هێڵی باریکی لای چەپ: مۆم', sw: 'strip', what: 'جەستە و سێبەری مۆمی ئاسایی: سەوز = بەرزبوو، سوور = دابەزیو.',
+      use: '<b>بەکارهێنان:</b> ئاراستەی گشتیی مۆمەکە لە یەک نیگادا.' },
+    { n: 10, t: 'خشتەی ئامار', sw: 'stats', what: 'بۆ هەر مۆمێک: Vol، Delta، Delta%، MaxD، MinD، Trades و CVD.',
+      use: '<b>بەکارهێنان:</b> بەراوردکردنی خێرای هێزی کڕیار و فرۆشیار لە نێوان مۆمەکاندا. ڕوونکردنەوەی هەر ڕیزێک لە بەشی «خشتەی ئاماری خوارەوە» دایە.' }
+  ];
+  var sw = {
+    cell: '<span style="position:absolute;inset:0;display:grid;place-items:center;font:700 10px JetBrains Mono,monospace;color:var(--c-text)">24x87</span>',
+    poc: '<span style="position:absolute;inset:2px;border:2px solid var(--c-poc)"></span>',
+    va: '<span style="position:absolute;inset:0;background:var(--c-va)"></span>',
+    buy: '<span style="position:absolute;top:0;bottom:0;right:0;width:50%;background:var(--c-buy)"></span>',
+    sell: '<span style="position:absolute;top:0;bottom:0;left:0;width:50%;background:var(--c-sell)"></span>',
+    zone: '<span style="position:absolute;inset:5px 0;background:var(--c-buy);opacity:.35;border-block:1px solid var(--c-buy)"></span>',
+    tape: '<span style="position:absolute;left:9px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--c-sell);opacity:.8;border:2px solid var(--c-tape)"></span>',
+    unf: '<span style="position:absolute;left:3px;right:3px;top:3px;height:3px;background:var(--c-unf)"></span>',
+    strip: '<span style="position:absolute;left:4px;top:3px;bottom:3px;width:5px;background:var(--c-buy)"></span>',
+    stats: '<span style="position:absolute;inset:2px;background:linear-gradient(var(--c-tape) 0 33%,var(--c-buy) 33% 66%,var(--c-sell) 66%)"></span>'
+  };
+  var box = document.getElementById('legend');
+  legend.forEach(function (it) {
+    var d = document.createElement('article');
+    d.className = 'item';
+    d.innerHTML = '<header><span class="badge">' + it.n + '</span><span class="swatch">' + sw[it.sw] + '</span><h3>' + it.t + '</h3></header>' +
+                  '<p class="what">' + it.what + '</p><p class="use">' + it.use + '</p>';
+    box.appendChild(d);
+  });
+
+  // ---------------- diagonal explainer
+  (function () {
+    var svg = document.getElementById('diag'), W = 560, H = 250, cw = 120, rh = 40, x0 = 150;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('width', W); svg.setAttribute('height', H);
+    el('rect', { x: 0, y: 0, width: W, height: H, fill: C.bg }, svg);
+    var ff = 'JetBrains Mono, Consolas, monospace';
+    function pair(y, rows, hiSide, label) {
+      rows.forEach(function (r, i) {
+        var yy = y + i * rh;
+        el('rect', { x: x0, y: yy, width: cw * 2, height: rh - 2, fill: C.cell, stroke: C.grid }, svg);
+        el('text', { x: x0 - 12, y: yy + 25, 'text-anchor': 'end', fill: C.dim, 'font-family': ff, 'font-size': 13 }, svg, r[0].toFixed(1));
+        if (r[3] === 'b') el('rect', { x: x0 + cw, y: yy, width: cw, height: rh - 2, fill: C.buy, 'fill-opacity': 0.75 }, svg);
+        if (r[3] === 's') el('rect', { x: x0, y: yy, width: cw, height: rh - 2, fill: C.sell, 'fill-opacity': 0.75 }, svg);
+        el('text', { x: x0 + cw - 14, y: yy + 26, 'text-anchor': 'end', fill: C.text, 'font-family': ff, 'font-size': 18 }, svg, r[1]);
+        el('text', { x: x0 + cw, y: yy + 25, 'text-anchor': 'middle', fill: C.dim, 'font-family': ff, 'font-size': 14 }, svg, 'x');
+        el('text', { x: x0 + cw + 14, y: yy + 26, fill: C.text, 'font-family': ff, 'font-size': 18 }, svg, r[2]);
+      });
+      // diagonal arrow
+      var ax, ay, bx, by;
+      if (hiSide === 'buy') { ax = x0 + cw + 40; ay = y + 20; bx = x0 + cw - 40; by = y + rh + 20; }
+      else { ax = x0 + cw - 40; ay = y + rh + 20; bx = x0 + cw + 40; by = y + 20; }
+      el('line', { x1: ax, y1: ay + (hiSide === 'buy' ? 8 : -8), x2: bx, y2: by + (hiSide === 'buy' ? -8 : 8), stroke: C.poc, 'stroke-width': 2, 'marker-end': 'url(#arr)' }, svg);
+      el('text', { x: x0 + cw * 2 + 18, y: y + rh + 4, fill: C.poc, 'font-family': ff, 'font-size': 14, 'font-weight': 700 }, svg, label);
+    }
+    var defs = el('defs', {}, svg), m = el('marker', { id: 'arr', viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M0,0 L10,5 L0,10 z', fill: C.poc }, m);
+    pair(16, [[4038.5, 18, 66, 'b'], [4038.0, 15, 58, '']], 'buy', '66 ≥ 3×15');
+    pair(140, [[4039.5, 48, 14, ''], [4039.0, 62, 15, 's']], 'sell', '62 ≥ 3×14');
+  })();
+
+  // ---------------- patterns
+  var small = { rowPx: 22, colW: 96, gap: 22, font: 12, padT: 12 };
+  function cfg(bars, extra) { var o = {}; for (var k in small) o[k] = small[k]; o.bars = bars; o.extraRight = extra || 0; return o; }
+  draw(document.getElementById('p1'), cfg([
+    { rows: [[4041.0, 6, 14], [4040.5, 10, 38], [4040.0, 9, 44], [4039.5, 12, 40], [4039.0, 11, 8]], o: 4039.1, h: 4041.4, l: 4039.0, c: 4041.0 },
+    { rows: [[4042.5, 4, 9], [4042.0, 8, 35], [4041.5, 7, 30], [4041.0, 10, 33], [4040.5, 9, 6]], o: 4040.9, h: 4042.9, l: 4040.5, c: 4042.4 }
+  ], 30));
+  draw(document.getElementById('p2'), cfg([
+    { rows: [[4038.0, 14, 10], [4037.5, 22, 18], [4037.0, 30, 24], [4036.5, 58, 26], [4036.0, 96, 31]], o: 4037.6, h: 4038.3, l: 4036.0, c: 4037.9,
+      bubbles: [{ p: 4036.0, side: -1, v: 60 }, { p: 4036.5, side: -1, v: 34 }] },
+    { rows: [[4039.0, 5, 16], [4038.5, 9, 42], [4038.0, 11, 37], [4037.5, 12, 10]], o: 4037.9, h: 4039.3, l: 4037.5, c: 4039.0 }
+  ], 10));
+  draw(document.getElementById('p3'), cfg([
+    { rows: [[4042.0, 3, 0], [4041.5, 6, 4], [4041.0, 18, 21], [4040.5, 25, 33], [4040.0, 20, 28]], o: 4040.1, h: 4042.1, l: 4040.0, c: 4041.2 },
+    { rows: [[4041.5, 14, 5], [4041.0, 30, 9], [4040.5, 33, 10], [4040.0, 36, 11], [4039.5, 12, 6]], o: 4041.2, h: 4041.9, l: 4039.5, c: 4039.6 }
+  ], 30));
+  draw(document.getElementById('p4'), cfg([
+    { rows: [[4039.0, 8, 12], [4038.5, 10, 41], [4038.0, 11, 36], [4037.5, 9, 30], [4037.0, 8, 5]], o: 4037.1, h: 4039.3, l: 4037.0, c: 4038.9 },
+    { rows: [[4040.5, 6, 10], [4040.0, 14, 22], [4039.5, 18, 25], [4039.0, 12, 9]], o: 4039.0, h: 4040.8, l: 4039.0, c: 4040.3 },
+    { rows: [[4040.0, 7, 15], [4039.5, 15, 19], [4039.0, 22, 14], [4038.5, 31, 12], [4038.0, 26, 30], [4037.5, 14, 9]], o: 4040.2, h: 4040.4, l: 4037.6, c: 4039.8 }
+  ], 20));
+})();
+</script>
+
+</body>
+</html>
